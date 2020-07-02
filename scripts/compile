@@ -19,5 +19,6 @@ $NATIVE_IMAGE \
     --verbose \
     --no-fallback \
     --no-server \
+    --language:js \
     "-J-Xmx3g" \
     reconsierge.main

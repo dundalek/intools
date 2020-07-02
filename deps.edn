@@ -1,4 +1,7 @@
-{:deps {org.clojure/clojure {:mvn/version "1.10.2-alpha1"}
-        reagent {:mvn/version "0.10.0"}
-        org.clojure/clojurescript {:git/url "https://github.com/nextjournal/clojurescript"
-                                   :sha "da9166015f6a28b2c18fa7706e457901d02a5d81"}}}
+{:deps {org.clojure/clojure {:mvn/version "1.10.2-alpha1"}}
+
+ :aliases
+ {:compile-js
+  {:extra-deps {reagent {:mvn/version "0.10.0"}
+                org.clojure/clojurescript {:git/url "https://github.com/nextjournal/clojurescript"
+                                           :sha "da9166015f6a28b2c18fa7706e457901d02a5d81"}}}}}

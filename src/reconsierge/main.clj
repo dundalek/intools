@@ -1,9 +1,10 @@
 (ns reconsierge.main
+  (:import (org.graalvm.polyglot Context Source Context$Builder Source$Builder Value))
   (:gen-class))
 
-(import '(org.graalvm.polyglot Context Source))
+(set! *warn-on-reflection* true)
 
-(def context-builder
+(def ^Context$Builder context-builder
   (doto (Context/newBuilder (into-array String ["js"]))
      (.option "js.timer-resolution" "1")
      (.option "js.java-package-globals" "false")
@@ -12,20 +13,27 @@
      (.allowAllAccess true)
      (.allowNativeAccess true)))
 
-(def context (.build context-builder))
+(def ^Context context (.build context-builder))
 
-(defn execute-fn [context fn & args]
+(defn ^Value execute-fn [^Context context fn & args]
   (let [fn-ref (.eval context "js" fn)
         args (into-array Object args)]
     (assert (.canExecute fn-ref) (str "cannot execute " fn))
     (.execute fn-ref args)))
 
-(def app-js (clojure.java.io/file "out/main.js"))
+; (def ^java.io.File app-js (clojure.java.io/file "out/main.js"))
+
+(def ^java.io.File app-js (clojure.java.io/file "pom.js"))
+
 (def app-source (.build (Source/newBuilder "js" app-js)))
 (.eval context app-source)
 
 (defn -main [& _args]
-  (def result (execute-fn context "my.app.html" "Polyglot Graal 🌈"))
-  (println (.asString result))
+
+  (let [^Value result (execute-fn context "myfn" "Polyglot Graal 🌈")]
+    (println (.asString result)))
+
+  #_(let [^Value result (execute-fn context "my.app.html" "Polyglot Graal 🌈")]
+      (println (.asString result)))
 
   #_(println "XX Hello world!"))
