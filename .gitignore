@@ -1,4 +1,8 @@
 .cpcache
+.idea
+.shadow-cljs
+*.iml
+node_modules
 /classes
 /target
 /out

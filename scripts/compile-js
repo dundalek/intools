@@ -3,6 +3,9 @@
 export PATH="$GRAALVM_HOME/bin:$PATH"
 export JAVA_HOME="$GRAALVM_HOME"
 
-clj -m cljs.main -t graaljs -c my.app
 
-js --jvm -f out/main.js -e "console.log(my.app.html('GraalJS 👋'))"
+# clj -Acompile-js -m cljs.main -t graaljs -c my.app
+#
+# js --jvm -f out/main.js -e "console.log(my.app.html('GraalJS 👋'))"
+
+npx shadow-cljs release script

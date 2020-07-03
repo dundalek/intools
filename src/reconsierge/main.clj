@@ -21,10 +21,7 @@
     (assert (.canExecute fn-ref) (str "cannot execute " fn))
     (.execute fn-ref args)))
 
-; (def ^java.io.File app-js (clojure.java.io/file "out/main.js"))
-
-(def ^java.io.File app-js (clojure.java.io/file "pom.js"))
-
+(def ^java.io.File app-js (clojure.java.io/file "out/main.js"))
 (def app-source (.build (Source/newBuilder "js" app-js)))
 (.eval context app-source)
 

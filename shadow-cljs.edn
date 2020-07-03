@@ -1,0 +1,14 @@
+;; shadow-cljs configuration
+{:source-paths
+ ["src"]
+
+ :dependencies
+ [[reagent "0.10.0"]]
+
+ ; :deps {:aliases [:compile-js]}
+
+ :builds
+ {:script
+  {:target :browser
+   :modules {:main {:entries [my.app]}}
+   :output-dir "out"}}}
