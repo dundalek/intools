@@ -1,10 +1,16 @@
 {
   "dependencies": {
+    "ink": "3.0.0-4",
+    "ink-text-input": "4.0.0",
     "react": "16.13.0",
     "react-dom": "16.13.0",
-    "shadow-cljs": "^2.10.13"
+    "shadow-cljs": "2.10.13"
   },
   "devDependencies": {
     "source-map-support": "^0.5.19"
+  },
+  "scripts": {
+    "dev": "npx shadow-cljs watch app",
+    "lint": "clj-kondo --lint src"
   }
 }

@@ -1,17 +1,18 @@
 (ns reconsierge.main
-  (:import (org.graalvm.polyglot Context Source Context$Builder Source$Builder Value))
+  (:require [clojure.java.io :as io])
+  (:import (org.graalvm.polyglot Context Source Context$Builder Value))
   (:gen-class))
 
 (set! *warn-on-reflection* true)
 
 (def ^Context$Builder context-builder
   (doto (Context/newBuilder (into-array String ["js"]))
-     (.option "js.timer-resolution" "1")
-     (.option "js.java-package-globals" "false")
-     (.out System/out)
-     (.err System/err)
-     (.allowAllAccess true)
-     (.allowNativeAccess true)))
+    (.option "js.timer-resolution" "1")
+    (.option "js.java-package-globals" "false")
+    (.out System/out)
+    (.err System/err)
+    (.allowAllAccess true)
+    (.allowNativeAccess true)))
 
 (def ^Context context (.build context-builder))
 
@@ -21,7 +22,7 @@
     (assert (.canExecute fn-ref) (str "cannot execute " fn))
     (.execute fn-ref args)))
 
-(def ^java.io.File app-js (clojure.java.io/file "out/main.js"))
+(def ^java.io.File app-js (io/file "out/main.js"))
 (def app-source (.build (Source/newBuilder "js" app-js)))
 (.eval context app-source)
 

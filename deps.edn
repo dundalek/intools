@@ -2,6 +2,12 @@
 
  :aliases
  {:compile-js
-  {:extra-deps {reagent {:mvn/version "0.10.0"}
+  {:extra-deps {reagent {:mvn/version "1.0.0-alpha2"}
                 org.clojure/clojurescript {:git/url "https://github.com/nextjournal/clojurescript"
-                                           :sha "da9166015f6a28b2c18fa7706e457901d02a5d81"}}}}}
+                                           :sha "da9166015f6a28b2c18fa7706e457901d02a5d81"}}}
+  :fmt
+  {:extra-deps {cljfmt {:mvn/version "0.6.4"}}
+   :main-opts ["-m" "cljfmt.main" "check" "src"]}
+  :fix
+  {:extra-deps {cljfmt {:mvn/version "0.6.4"}}
+   :main-opts ["-m" "cljfmt.main" "fix" "src"]}}}

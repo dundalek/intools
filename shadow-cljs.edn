@@ -3,7 +3,7 @@
  ["src"]
 
  :dependencies
- [[reagent "0.10.0"]]
+ [[reagent "1.0.0-alpha2"]]
 
  ; :deps {:aliases [:compile-js]}
 
@@ -11,4 +11,9 @@
  {:script
   {:target :browser
    :modules {:main {:entries [my.app]}}
-   :output-dir "out"}}}
+   :output-dir "out"}
+
+  :app {:target :node-script
+        :output-to "target/main.js"
+        :main #_intools.dkmsin.main/-main
+                intools.flatpakin.main/-main}}}
