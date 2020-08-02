@@ -16,4 +16,5 @@
   :app {:target :node-script
         :output-to "target/main.js"
         :main #_intools.dkmsin.main/-main
-                intools.flatpakin.main/-main}}}
+              #_intools.flatpakin.main/-main
+              intools.resticin.main/-main}}}

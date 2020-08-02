@@ -3,7 +3,7 @@
             [reagent.core :as r]
             [react]
             [ink :refer [Box Text]]
-            [intools.views :refer [selectable-list]]
+            [intools.views :refer [selectable-list action-bar]]
             ; [intools.hooks :refer [use-fullscreen]]
             [intools.dkmsin.model :as model]
             [ink-text-input :refer [UncontrolledTextInput]]))
@@ -213,16 +213,6 @@
                           :on-activate on-activate
                           :on-cancel on-cancel}]]])
 
-(defn action-bar [actions]
-  (->> actions
-       (map (fn [{:keys [name shortcut shortcut-label]}]
-              [:<>
-               [:> Text name]
-               [:> Text {:color "blue"}
-                (str " [" (or shortcut-label shortcut) "]")]]))
-       (interpose [:> Text "  "])
-       (into [:> Box {:border-style "round"}])))
-
 (defn demo []
   ; (use-fullscreen)
   (let [[{:keys [route modules]} dispatch] (react/useReducer reducer-fn nil init-state)
@@ -234,22 +224,17 @@
        (.focusNext focus-manager)
        js/undefined)
      #js [])
-    ; (react/useEffect
-    ;  (fn []
-    ;    (.focusNext focus-manager)
-    ;    js/undefined)
-    ;  #js [(boolean selected-module)])
     (ink/useInput
      (fn [input _key]
-       (cond
-         ; (.-tab key) (dispatch [:next-tab])
-         :else (case input
-                 "1" (dispatch [:navigate {:name ::module-list}])
-                 "2" (dispatch [:navigate {:name ::kernel-list}])
-                 "3" (dispatch [:navigate {:name ::instance-list}])
-                 "m" (dispatch [:navigate {:name ::module-add}])
-                 "i" (run-sh "sudo" "dkms" "autoinstall")
-                 nil))))
+       (if-let [route (some (fn [{:keys [shortcut route]}]
+                              (when (= shortcut input)
+                                route))
+                            tabs)]
+         (dispatch [:navigate {:name route}])
+         (case input
+           "m" (dispatch [:navigate {:name ::module-add}])
+           "i" (run-sh "sudo" "dkms" "autoinstall")
+           nil))))
     [:> Box {:flex-direction "column"}
      [:> Box {:border-style "round"}
       (->> tabs
