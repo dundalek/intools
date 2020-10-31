@@ -12,21 +12,6 @@
 
 (def date-format (DateTimeFormat. "y-MM-dd HH:mm:ss"))
 
-(def global-actions
-  [{:id :backup
-    :name "Backup"
-    :shortcut "b"}
-   {:id :mount
-    :name "Mount"
-    :shortcut "m"}
-     ; mount         Mount the repository}
-   {:id :forget
-    :name "Forget"
-    :shortcut "d"}
-   {:id :version
-    :name "Version"
-    :shortcut "v"}])
-
 (def tabs
   [{:name "Snapshots"
     :shortcut "1"
@@ -48,18 +33,40 @@
    ;;   objects - list + cat
    ;; [blobs|packs|index|snapshots|keys|locks] [flags]
 
-;; second level filter - app, runtime, running
 
-;; jak udelat search? nejaka global install akce?
+(def global-actions
+  [{:id :backup
+    :name "Backup"
+    :shortcut "b"}
+   {:id :mount
+    :name "Mount"
+    :shortcut "m"}
+     ; mount         Mount the repository}
+   {:id :forget
+    :name "Forget"
+    :shortcut "d"}
+   {:id :version
+    :name "Version"
+    :shortcut "v"}])
 
-;; nebo / - search and concat installed apps?
-  ;; search nedava installed status, ale to pujde joinout is installed apps
-  ;; search returns also runtimes, can have multiple versions
+(def snapshot-actions
+  [{:name "Restore"}
+   {:name "Files"} ;; do find under list with /
+   {:name "Diff"}
+   {:name "Tags"}
+   {:name "Forget"}
+   {:name "Stats"}])
 
-;; Permissions
-
-
-; (def all (concat apps runtimes))
+(def health-actions
+  [{:name "Stats"}
+   {:name "Cache"}
+   {:name "Cache Cleanup"}
+   {:name "Check Errors"}
+   {:name "Prune"}
+   {:name "Unlock"}
+   {:name "Unlock All"}
+   {:name "Migrate"}
+   {:name "Rebuild Index"}])
 
 (defn init-state []
   {:route {:name ::snapshots}
@@ -74,15 +81,17 @@
         state)
       (assoc :route route)))
 
-(defmethod reducer :select-app [state [_ item]]
-  (assoc state :route {:name ::app-actions
-                       :params {:app item}}))
+(defmethod reducer :select-snapshot [state [_ item]]
+  (assoc state :route {:name ::snapshot-actions
+                       :params {:snapshot item}}))
 
 ;; useReducer does not work with multimethods
 (defn reducer-fn [state event]
   (reducer state event))
 
-(defn snapshot-row [{:keys [short-id time hostname paths is-selected]}]
+(derive ::snapshot-actions ::snapshots)
+
+(defn snapshot-row [{:keys [short-id time hostname tags paths is-selected]}]
   [:> Box
    [:> Text {:color "green" :wrap "truncate-end" :bold is-selected} short-id]
    [:> Text " "]
@@ -91,7 +100,9 @@
    [:> Text " "]
    [:> ink/Spacer]
    [:> Text {:wrap "truncate-end" :bold is-selected} hostname]
-   ; TODO:tags
+   [:> Text " "]
+   [:> ink/Spacer]
+   [:> Text {:wrap "truncate-end" :bold is-selected} (str/join ", " tags)]
    [:> Text " "]
    [:> ink/Spacer]
    [:> Text {:wrap "truncate-end" :bold is-selected} (str/join ", " paths)]])
@@ -152,12 +163,32 @@
         [:f> selectable-list {:items items
                               :item-component snapshot-row
                               :on-activate #(dispatch [:select-snapshot %])}]]
+       ::snapshot-actions
+       [:> Box {:margin-x 1}
+        [:f> selectable-list {:items snapshot-actions
+                              :item-component
+                              (fn [{:keys [name is-selected]}]
+                                [:> Box
+                                 [:> Text {:color (when is-selected "blue") :bold is-selected} name]])
+                              :on-activate (fn [])
+                              :on-cancel #(dispatch [:navigate {:name ::snapshots}])}]]
        ::keys
        [:> Box {:margin-x 1
                 :flex-direction "column"}
         [:f> selectable-list {:items items
                               :item-component key-row
                               :on-activate #(dispatch [:select-key %])}]]
+
+       ::health
+       [:> Box {:margin-x 1}
+        [:f> selectable-list {:items health-actions
+                              :item-component
+                              (fn [{:keys [name is-selected]}]
+                                [:> Box
+                                 [:> Text {:color (when is-selected "blue") :bold is-selected} name]])
+                              :on-activate (fn [])
+                              :on-cancel (fn [])}]]
+
        ::backup
        [:> Box {:margin-x 1
                 :flex-direction "column"}
