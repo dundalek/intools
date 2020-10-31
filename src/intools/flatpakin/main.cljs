@@ -64,7 +64,7 @@
 (defn reducer-fn [state event]
   (reducer state event))
 
-(defn app-row [{:keys [name application version branch installation is-selected]}]
+(defn app-row [{:keys [name application version branch installation]} {:keys [is-selected]}]
   [:> Box
    [:> Text {:color "green" :wrap "truncate-end" :bold is-selected} name]
    [:> Text " "]

@@ -4,15 +4,15 @@
             [react]
             [ink :refer [Box Text]]
             [intools.views :refer [selectable-list action-bar]]
+            [intools.shell :refer [sh]]
             ; [intools.hooks :refer [use-fullscreen]]
+            [intools.dkmsin.actions :as actions]
             [intools.dkmsin.model :as model]
             [ink-text-input :refer [UncontrolledTextInput]]))
             ; [ink-select-input :refer [default] :rename {default SelectInput}]))
 
 (defonce !app (atom nil))
 (declare render)
-
-(def spawn (.-spawn (js/require "child_process")))
 
 (def tabs
   [{:name "Modules"
@@ -21,13 +21,13 @@
    {:name "Kernels"
     :shortcut "2"
     :route ::kernel-list}
-   {:name "All instances"
+   {:name "All"
     :shortcut "3"
     :route ::instance-list}])
 
 (def global-actions
   [{:name "Select"
-    :shortcut-label "enter][→"}
+    :shortcut-label "enter"}
    ; {:name "Search"
    ;  :shortcut "/"}
    {:name "Add module"
@@ -40,19 +40,29 @@
     :shortcut "ctrl+c"}])
    ;; Help
 
+(def selectable-list-actions
+  [{:name "Select"
+    :shortcut-label "enter"}
+   {:name "Nav"
+    :shortcut-label "↑↓"}
+   {:name "Back"
+    :shortcut-label "esc"}
+   {:name "Quit"
+    :shortcut "ctrl+c"}])
+
 (def actions
-  [{:id "install"
-    :name "Install"
-    :shortcut "i"}
-   {:id "remove"
-    :name "Remove"
-    :shortcut "d"}
-   {:id "build"
+  [{:id "build"
     :name "Build"
     :shortcut "b"}
+   {:id "install"
+    :name "Install"
+    :shortcut "i"}
    {:id "uninstall"
     :name "Uninstall"
     :shortcut "u"}
+   {:id "remove"
+    :name "Remove"
+    :shortcut "d"}
    {:id "export"
     :name "Export..."
     :shortcut "e"}])
@@ -82,7 +92,7 @@
 
 
 (defn init-state []
-  {:route {:name ::module-list}
+  {:navigation-stack (list {:name ::module-list})
    :modules (model/list-items)})
 
 (defmulti reducer (fn [_state [event-name]] event-name))
@@ -91,17 +101,26 @@
 ;   (update state :tab-index (fn [index] (mod (inc index) (count tabs)))))
 
 (defmethod reducer :navigate [state [_ route]]
-  (assoc state :route route))
+  (update state :navigation-stack conj route))
 
-(defmethod reducer :select-module [state [_ module]]
-  (assoc state :route {:name ::module-actions
-                       :params {:module module}}))
+(defmethod reducer :navigate-replace [state [_ route]]
+  (assoc state :navigation-stack (list route)))
+
+(defmethod reducer :navigate-back [state]
+  (let [next-stack (-> state :navigation-stack pop)]
+    (cond-> state
+      (seq next-stack) (assoc :navigation-stack next-stack))))
+
+(defmethod reducer :select-module [state [_ {:keys [module-name instances]}]]
+  (update state :navigation-stack conj {:name ::module-actions
+                                        :params {:module-name module-name
+                                                 :instances instances}}))
 
 ;; useReducer does not work with multimethods
 (defn reducer-fn [state event]
   (reducer state event))
 
-(defn instance-row [{:keys [module module-version kernel-version arch status is-selected]}]
+(defn instance-row [{:keys [module module-version kernel-version arch status]} {:keys [is-selected]}]
   [:> Box
    [:> Text {:color "green" :wrap "truncate-end" :bold is-selected} module]
    [:> Text " "]
@@ -117,11 +136,14 @@
    [:> ink/Spacer]
    [:> Text {:color "red" :wrap "truncate-end" :bold is-selected} status]])
 
+(defn module-versions [instances]
+  (->> instances (map :module-version) (distinct) (sort #(compare %2 %1))))
+
 (defn group-modules [modules]
   (->> modules
        (group-by :module)
        (map (fn [[module versions]]
-              (let [module-versions (->> versions (map :module-version) (distinct) (sort #(compare %2 %1)))
+              (let [module-versions (module-versions versions)
                     kernel-versions (->> versions (map :kernel-version) (distinct) (sort #(compare %2 %1)))
                     archs (->> versions (map :arch) (distinct))
                     statuses (->> versions (map :status) (distinct))]
@@ -132,7 +154,7 @@
                  :statuses statuses})))
        (sort-by :module)))
 
-(defn module-row [{:keys [module module-versions kernel-versions archs statuses is-selected]}]
+(defn module-row [{:keys [module module-versions kernel-versions archs statuses]} {:keys [is-selected]}]
   [:> Box
    [:> Text {:color "green" :wrap "truncate-end" :bold is-selected} module]
    [:> Text " "]
@@ -165,7 +187,7 @@
                  :statuses statuses})))
        (sort-by :kernel-version #(compare %2 %1))))
 
-(defn kernel-row [{:keys [kernel-version modules archs statuses is-selected]}]
+(defn kernel-row [{:keys [kernel-version modules archs statuses]} {:keys [is-selected]}]
   [:> Box
    [:> Text {:color "green" :wrap "truncate-end" :bold is-selected} kernel-version]
    [:> Text " "]
@@ -178,27 +200,28 @@
    [:> ink/Spacer]
    [:> Text {:color "red" :wrap "truncate-end" :bold is-selected} (str/join ", " statuses)]])
 
-(defn run-sh [cmd & args]
+(defn run-sh [& args]
   (.clear @!app)
   (.unmount @!app)
-  (js/console.log "\nRunning...\n")
-  (println cmd args)
-  (render)
-  #_(doto (spawn cmd (to-array args)
-                 #js {:stdio #js ["ignore" "inherit" "inherit"]})
-      (.on "close" (fn [code]
-                     (js/console.log "\ndone" code)
-                     (render)))
-      (.on "error" (fn [err]
-                     (js/console.log "error" err)))))
+  (apply println (cons "\nRunning command:\n " args))
+  (apply sh args)
+  (render))
 
-(defn run-command [{:keys [id] :as _action} {:keys [module module-versions]}]
-  (run-sh "sudo" "dkms" id module "-v" (first module-versions)))
-    ;; what if more moudule versions?
-    ;; or --all
+(defn run-fx! [[fx arg]]
+  (case fx
+    :sh (apply run-sh arg)))
 
+(defn run-module-command [{:keys [id] :as _action} instances]
+  (assert (->> instances (map :module) (distinct) (count) (= 1)))
+  (assert (->> instances (map :module-version) (distinct) (count) (= 1)))
+  (let [{:keys [module module-version]} (first instances)]
+    (apply run-sh (concat ["sudo" "dkms" id
+                           "-m" (str module "/" module-version)]
+                          (mapcat (fn [{:keys [kernel-version arch]}]
+                                    ["-k" (str kernel-version "/" arch)])
+                                  instances)))))
 
-(defn action-row [{:keys [name shortcut is-selected]}]
+(defn action-row [{:keys [name shortcut]} {:keys [is-selected]}]
   [:> Box
    [:> Text {:color (when is-selected "blue") :bold is-selected} (str "[" shortcut "] ")]
    [:> Text {:color (when is-selected "blue") :bold is-selected} name]])
@@ -213,9 +236,10 @@
                           :on-activate on-activate
                           :on-cancel on-cancel}]]])
 
-(defn demo []
+(defn app []
   ; (use-fullscreen)
-  (let [[{:keys [route modules]} dispatch] (react/useReducer reducer-fn nil init-state)
+  (let [[{:keys [navigation-stack modules]} dispatch] (react/useReducer reducer-fn nil init-state)
+        route (peek navigation-stack)
         route-name (:name route)
         focus-manager (ink/useFocusManager)]
     ;; Switch focus next to switch focus from the global key handling to the module list
@@ -230,10 +254,10 @@
                               (when (= shortcut input)
                                 route))
                             tabs)]
-         (dispatch [:navigate {:name route}])
+         (dispatch [:navigate-replace {:name route}])
          (case input
            "m" (dispatch [:navigate {:name ::module-add}])
-           "i" (run-sh "sudo" "dkms" "autoinstall")
+           "i" (run-fx! (actions/autoinstall))
            nil))))
     [:> Box {:flex-direction "column"}
      [:> Box {:border-style "round"}
@@ -251,53 +275,119 @@
                 :flex-direction "column"}
         [:f> selectable-list {:items (group-modules modules)
                               :item-component module-row
-                              :on-activate (fn [module]
-                                             (dispatch [:select-module module]))}]]
+                              :on-activate (fn [{:keys [module]}]
+                                             (dispatch [:select-module {:module-name module
+                                                                        :instances (->> modules
+                                                                                        (filter #(= module (:module %))))}]))}]]
+
        ::kernel-list
        [:> Box {:margin-x 1
                 :flex-direction "column"}
         [:f> selectable-list {:items (group-kernels modules)
                               :item-component kernel-row}]]
+
        ::instance-list
        [:> Box {:margin-x 1
                 :flex-direction "column"}
         [:f> selectable-list {:items modules
-                              :item-component instance-row}]]
-       ::module-actions
-       (let [selected-module (-> route :params :module)]
-         [:> Box {:margin-x 1
-                  :flex-direction "column"}
-          [:> Text (:module selected-module)]
-          [action-menu {:on-activate (fn [action]
-                                       (if (= (:id action) "export")
-                                         (dispatch [:navigate {:name ::module-export-actions
-                                                               :params {:module selected-module}}])
-                                         (run-command action selected-module)))
-                        :on-cancel (fn []
-                                     (dispatch [:navigate {:name ::module-list}]))}]])
+                              :item-component instance-row
+                              :on-activate (fn [{:keys [module] :as selected}]
+                                             (dispatch [:select-module {:module-name module
+                                                                        :instances [selected]}]))}]]
+
        ::module-add
        [:> Box
         [:> Box {:margin-right 1}
          [:> Text "Module path:"]]
-        [:> UncontrolledTextInput {:on-submit (fn [value]
-                                                (run-sh "sudo" "dkms" "add" value))}]]
+        [:> UncontrolledTextInput {:on-submit #(run-fx! (actions/add %))}]]
+
+       ::module-actions
+       (let [{:keys [module-name instances]} (:params route)]
+         [:> Box {:margin-x 1
+                  :flex-direction "column"}
+          [:> Box
+           [:> Text "Select action for: "]
+           [:> Text {:color "green"} module-name]]
+          [action-menu {:on-activate (fn [action]
+                                       (cond
+                                         (= (:id action) "export")
+                                         (dispatch [:navigate {:name ::module-export-actions
+                                                               :params (:params route)}])
+
+                                         (< 1 (count (module-versions instances)))
+                                         (dispatch [:navigate {:name ::module-version-list
+                                                               :params {:action action
+                                                                        :module-name module-name
+                                                                        :instances instances}}])
+
+                                         (< 1 (count instances))
+                                         (dispatch [:navigate {:name ::kernel-version-list
+                                                               :params {:action action
+                                                                        :module-name module-name
+                                                                        :module-version (-> instances first :module-version)
+                                                                        :instances instances}}])
+
+                                         :else
+                                         (run-module-command action instances)))
+                        :on-cancel #(dispatch [:navigate-back])}]])
+
+       ::module-version-list
+       [:> Box {:margin-x 1
+                :flex-direction "column"}
+        [:> Text "TODO: Select module version"]]
+
+       ::kernel-version-list
+       (let [{:keys [action module-name module-version instances]} (:params route)]
+         [:> Box {:margin-x 1
+                  :flex-direction "column"}
+          [:> Box
+           [:> Text "Select kernel to "]
+           [:> Text {:color "red"} (:id action)]
+           [:> Text " "]
+           [:> Text {:color "green"} module-name]
+           [:> Text " "]
+           [:> Text module-version]]
+          [:f> selectable-list
+           {:items (cons ::all-kernels instances)
+            :item-component (fn [{:keys [kernel-version arch status] :as item} {:keys [is-selected]}]
+                              (if (= item ::all-kernels)
+                                [:> Box
+                                 [:> Text {:wrap "truncate-end" :bold is-selected} (str "All kernels (" (count instances) ")")]]
+                                [:> Box
+                                 [:> Text {:color "green" :wrap "truncate-end" :bold is-selected} kernel-version]
+                                 [:> Text " "]
+                                 [:> ink/Spacer]
+                                 [:> Text {:wrap "truncate-end" :bold is-selected} arch]
+                                 [:> Text " "]
+                                 [:> ink/Spacer]
+                                 [:> Text {:color "red" :wrap "truncate-end" :bold is-selected} status]]))
+            :on-activate (fn [item]
+                           (run-module-command action (if (= item ::all-kernels)
+                                                        instances
+                                                        [item])))}]])
 
        ::module-export-actions
        [:> Box {:margin-x 1}
         [:f> selectable-list {:items export-actions
                               :item-component
-                              (fn [{:keys [id is-selected]}]
+                              (fn [{:keys [id]} {:keys [is-selected]}]
                                 [:> Box
                                  [:> Text {:color (when is-selected "blue") :bold is-selected} id]])
                               :on-activate (fn [{:keys [id]}]
-                                             (run-sh "sudo" "dkms" id))
-                              :on-cancel #(dispatch [:navigate {:name ::module-list}])}]]
+                                             ;; TODO
+                                             #_(run-sh "sudo" "dkms" id))
+                              :on-cancel #(dispatch [:navigate-back])}]]
+
        nil)
 
-     [action-bar global-actions]]))
+     [action-bar
+      (case route-name
+        (::module-actions ::kernel-version-list) selectable-list-actions
+
+        global-actions)]]))
 
 (defn render []
-  (reset! !app (ink/render (r/as-element [:f> demo]))))
+  (reset! !app (ink/render (r/as-element [:f> app]))))
 
 (defn -main []
   ; (swap! !app assoc :modules modules)
@@ -305,3 +395,9 @@
 
 (defn ^:dev/after-load reload! []
   (render))
+
+(comment
+
+  (shadow/repl :dkmsin)
+
+  (group-modules (take 1 (model/list-items))))

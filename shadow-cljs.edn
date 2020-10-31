@@ -4,6 +4,8 @@
  :dependencies
  [[reagent "1.0.0-alpha2"]]
 
+ :nrepl {:port 34638}
+
  :builds
  {:dkmsin {:target :node-script
            :output-to "target/dkmsin.js"

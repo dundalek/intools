@@ -21,7 +21,7 @@
           (map-indexed
            (fn [idx {:keys [key] :as item}]
              ^{:key (or key idx)}
-             [item-component (assoc item :is-selected (= idx selected-index))])))]))
+             [item-component item {:is-selected (= idx selected-index)}])))]))
 
 (defn action-bar [actions]
   (->> actions

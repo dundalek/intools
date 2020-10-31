@@ -91,7 +91,7 @@
 
 (derive ::snapshot-actions ::snapshots)
 
-(defn snapshot-row [{:keys [short-id time hostname tags paths is-selected]}]
+(defn snapshot-row [{:keys [short-id time hostname tags paths]} {:keys [is-selected]}]
   [:> Box
    [:> Text {:color "green" :wrap "truncate-end" :bold is-selected} short-id]
    [:> Text " "]
@@ -107,7 +107,7 @@
    [:> ink/Spacer]
    [:> Text {:wrap "truncate-end" :bold is-selected} (str/join ", " paths)]])
 
-(defn key-row [{:keys [id user-name host-name created current is-selected]}]
+(defn key-row [{:keys [id user-name host-name created current]} {:keys [is-selected]}]
   [:> Box
    [:> Text {:color "green" :wrap "truncate-end" :bold is-selected} (if current "*" " ")]
    [:> Text {:color "green" :wrap "truncate-end" :bold is-selected} id]
@@ -167,7 +167,7 @@
        [:> Box {:margin-x 1}
         [:f> selectable-list {:items snapshot-actions
                               :item-component
-                              (fn [{:keys [name is-selected]}]
+                              (fn [{:keys [name]} {:keys [is-selected]}]
                                 [:> Box
                                  [:> Text {:color (when is-selected "blue") :bold is-selected} name]])
                               :on-activate (fn [])
@@ -183,7 +183,7 @@
        [:> Box {:margin-x 1}
         [:f> selectable-list {:items health-actions
                               :item-component
-                              (fn [{:keys [name is-selected]}]
+                              (fn [{:keys [name]} {:keys [is-selected]}]
                                 [:> Box
                                  [:> Text {:color (when is-selected "blue") :bold is-selected} name]])
                               :on-activate (fn [])
