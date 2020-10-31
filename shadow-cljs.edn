@@ -1,20 +1,18 @@
-;; shadow-cljs configuration
 {:source-paths
  ["src"]
 
  :dependencies
  [[reagent "1.0.0-alpha2"]]
 
- ; :deps {:aliases [:compile-js]}
-
  :builds
- {:script
-  {:target :browser
-   :modules {:main {:entries [my.app]}}
-   :output-dir "out"}
+ {:dkmsin {:target :node-script
+           :output-to "target/dkmsin.js"
+           :main intools.dkmsin.main/-main}
 
-  :app {:target :node-script
-        :output-to "target/main.js"
-        :main #_intools.dkmsin.main/-main
-              #_intools.flatpakin.main/-main
-              intools.resticin.main/-main}}}
+  :flatpakin {:target :node-script
+              :output-to "target/flatpakin.js"
+              :main intools.flatpakin.main/-main}
+
+  :resticin {:target :node-script
+             :output-to "target/resticin.js"
+             :main intools.resticin.main/-main}}}

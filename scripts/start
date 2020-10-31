@@ -1,6 +1,0 @@
-#!/bin/sh
-
-export PATH="$GRAALVM_HOME/bin:$PATH"
-export JAVA_HOME="$GRAALVM_HOME"
-
-clojure -m reconsierge.main

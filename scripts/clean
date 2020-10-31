@@ -1,3 +1,0 @@
-#!/bin/sh
-
-rm -rf .cpcache out target reconsierge classes/*
