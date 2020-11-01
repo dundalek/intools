@@ -77,20 +77,6 @@
    {:id "mkdsc"}
    {:id "mkkmp"}])
 
-;; Routes
-
-
-(derive ::module-actions ::module-list)
-(derive ::module-export-actions ::module-list)
-(derive ::module-add ::module-list)
-;
-; ::kernel-list
-;
-; ::instance-list
-; ::instance-actions
-; ::instance-export-actions
-
-
 (defn init-state []
   {:navigation-stack (list {:name ::module-list})
    :modules (model/list-items)})
@@ -136,22 +122,18 @@
    [:> ink/Spacer]
    [:> Text {:color "red" :wrap "truncate-end" :bold is-selected} status]])
 
-(defn module-versions [instances]
-  (->> instances (map :module-version) (distinct) (sort #(compare %2 %1))))
+(defn distinct-vals [f coll]
+  (->> coll (map f) (distinct) (sort)))
 
 (defn group-modules [modules]
   (->> modules
        (group-by :module)
-       (map (fn [[module versions]]
-              (let [module-versions (module-versions versions)
-                    kernel-versions (->> versions (map :kernel-version) (distinct) (sort #(compare %2 %1)))
-                    archs (->> versions (map :arch) (distinct))
-                    statuses (->> versions (map :status) (distinct))]
-                {:module module
-                 :module-versions module-versions
-                 :kernel-versions kernel-versions
-                 :arch archs
-                 :statuses statuses})))
+       (map (fn [[module items]]
+              {:module module
+               :module-versions (reverse (distinct-vals :module-version items))
+               :kernel-versions (reverse (distinct-vals :kernel-version items))
+               :arch (distinct-vals :arch items)
+               :statuses (distinct-vals :status items)}))
        (sort-by :module)))
 
 (defn module-row [{:keys [module module-versions kernel-versions archs statuses]} {:keys [is-selected]}]
@@ -178,13 +160,10 @@
   (->> modules
        (group-by :kernel-version)
        (map (fn [[kernel-version items]]
-              (let [modules (->> items (map :modules) (distinct) (sort))
-                    archs (->> items (map :arch) (distinct))
-                    statuses (->> items (map :status) (distinct))]
-                {:kernel-version kernel-version
-                 :modules modules
-                 :archs archs
-                 :statuses statuses})))
+              {:kernel-version kernel-version
+               :modules (distinct-vals :module items)
+               :archs (distinct-vals :arch items)
+               :statuses (distinct-vals :status items)}))
        (sort-by :kernel-version #(compare %2 %1))))
 
 (defn kernel-row [{:keys [kernel-version modules archs statuses]} {:keys [is-selected]}]
@@ -264,7 +243,7 @@
      [:> Box {:border-style "round"}
       (->> tabs
            (map (fn [{:keys [name shortcut route]}]
-                  (let [is-selected (isa? route-name route)]
+                  (let [is-selected (some #(= (:name %) route) navigation-stack)]
                     [:<>
                      [:> Text {:color (when is-selected "yellow")} name]
                      [:> Text {:color "blue"} (str " [" shortcut "]")]])))
@@ -285,7 +264,11 @@
        [:> Box {:margin-x 1
                 :flex-direction "column"}
         [:f> selectable-list {:items (group-kernels modules)
-                              :item-component kernel-row}]]
+                              :item-component kernel-row
+                              :on-activate (fn [{:keys [kernel-version]}]
+                                             (dispatch [:navigate {:name ::kernel-module-list
+                                                                   :params {:instances (->> modules
+                                                                                            (filter #(= kernel-version (:kernel-version %))))}}]))}]]
 
        ::instance-list
        [:> Box {:margin-x 1
@@ -315,7 +298,7 @@
                                          (dispatch [:navigate {:name ::module-export-actions
                                                                :params (:params route)}])
 
-                                         (< 1 (count (module-versions instances)))
+                                         (< 1 (count (distinct-vals :module-version instances)))
                                          (dispatch [:navigate {:name ::module-version-list
                                                                :params {:action action
                                                                         :module-name module-name
@@ -362,10 +345,21 @@
                                  [:> Text " "]
                                  [:> ink/Spacer]
                                  [:> Text {:color "red" :wrap "truncate-end" :bold is-selected} status]]))
+            :on-cancel #(dispatch [:navigate-back])
             :on-activate (fn [item]
                            (run-module-command action (if (= item ::all-kernels)
                                                         instances
                                                         [item])))}]])
+
+       ::kernel-module-list
+       [:> Box {:margin-x 1
+                :flex-direction "column"}
+        [:f> selectable-list {:items (group-modules (-> route :params :instances))
+                              :item-component module-row
+                              :on-activate (fn [{:keys [module]}]
+                                             (dispatch [:select-module {:module-name module
+                                                                        :instances (->> route :params :instances
+                                                                                        (filter #(= module (:module %))))}]))}]]
 
        ::module-export-actions
        [:> Box {:margin-x 1}
@@ -401,4 +395,4 @@
 
   (shadow/repl :dkmsin)
 
-  (group-modules (take 1 (model/list-items))))
+  (group-kernels (model/list-items)))
