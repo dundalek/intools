@@ -7,7 +7,7 @@
   (let [[selected-index set-selected-index] (react/useState 0)
         is-focused (.-isFocused (ink/useFocus #js{:autoFocus true}))]
     (ink/useInput
-     (fn [_input key]
+     (fn [_input ^js key]
        (when is-focused
          (cond
            (.-upArrow key) (set-selected-index (Math/max 0 (dec selected-index)))

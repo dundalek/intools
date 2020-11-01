@@ -201,8 +201,9 @@
    [:> Text {:color "red" :wrap "truncate-end" :bold is-selected} (str/join ", " statuses)]])
 
 (defn run-sh [& args]
-  (.clear @!app)
-  (.unmount @!app)
+  (let [^js/InkInstance app @!app]
+    (.clear app)
+    (.unmount app))
   (apply println (cons "\nRunning command:\n " args))
   (apply sh args)
   (render))

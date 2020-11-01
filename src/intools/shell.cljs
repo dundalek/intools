@@ -4,7 +4,7 @@
 (def spawn-sync (.-spawnSync (js/require "child_process")))
 
 (defn sh [cmd & args]
-  (let [proc (spawn-sync cmd (to-array args) #js{:encoding "utf-8"})]
+  (let [^js proc (spawn-sync cmd (to-array args) #js{:encoding "utf-8"})]
     {:out (.-stdout proc)
      :err (.-stderr proc)
      :exit (.-status proc)}))
