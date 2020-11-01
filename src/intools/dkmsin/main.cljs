@@ -69,13 +69,27 @@
    ;; Show source directory or open shell in it?
 
 (def export-actions
-  [{:id "mkdriverdisk"}
-   {:id "mktarball"}
-   {:id "mkrpm"}
-   {:id "mkdev"}
-   {:id "mkbmdeb"}
-   {:id "mkdsc"}
-   {:id "mkkmp"}])
+  (->>
+   [{:id "mkdriverdisk"
+     :shortcut "1"
+     :args "mkdriverdisk [-d distro] [-r release] [--media mediatype] [-k kernel/arch] [module/version]"}
+    {:id "mktarball"
+     :shortcut "2"
+     :args "mktarball [module/module-version] [-k kernel/arch] [--archive /path/to/tarball.tar] [--source-only] [--binaries-only]"}
+    {:id "mkrpm"
+     :shortcut "3"
+     :args "mkrpm [module/module-version] [-k kernel/arch] [--source-only] [--binaries-only]"}
+    {:id "mkdeb"
+     :shortcut "4"}
+    {:id "mkbmdeb"
+     :shortcut "5"}
+    {:id "mkdsc"
+     :shortcut "6"}
+    {:id "mkkmp"
+     :shortcut "7"
+     :args "mkkmp [module/module-version] [--spec specfile]"}]
+   (mapv (fn [{:keys [id] :as item}]
+           (assoc item :name id)))))
 
 (defn init-state []
   {:navigation-stack (list {:name ::module-list})
@@ -179,34 +193,33 @@
    [:> ink/Spacer]
    [:> Text {:color "red" :wrap "truncate-end" :bold is-selected} (str/join ", " statuses)]])
 
-(defn run-sh [& args]
+(defn with-terminal-output [f]
   (let [^js/InkInstance app @!app]
     (.clear app)
     (.unmount app))
-  (apply println (cons "\nRunning command:\n " args))
-  (apply sh args)
+  (f)
   (render))
+
+(defn run-sh [& args]
+  (apply println (cons "\nRunning command:\n " args))
+  (apply sh args))
 
 (defn run-fx! [[fx arg]]
   (case fx
-    :sh (apply run-sh arg)))
+    :sh (with-terminal-output
+          #(apply run-sh arg))))
 
 (defn run-module-command [{:keys [id] :as _action} instances]
-  (assert (->> instances (map :module) (distinct) (count) (= 1)))
-  (assert (->> instances (map :module-version) (distinct) (count) (= 1)))
-  (let [{:keys [module module-version]} (first instances)]
-    (apply run-sh (concat ["sudo" "dkms" id
-                           "-m" (str module "/" module-version)]
-                          (mapcat (fn [{:keys [kernel-version arch]}]
-                                    ["-k" (str kernel-version "/" arch)])
-                                  instances)))))
+  (with-terminal-output
+    #(doseq [{:keys [module module-version kernel-version arch]} instances]
+       (run-sh "sudo" "dkms" id (str module "/" module-version) "-k" (str kernel-version "/" arch)))))
 
 (defn action-row [{:keys [name shortcut]} {:keys [is-selected]}]
   [:> Box
    [:> Text {:color (when is-selected "blue") :bold is-selected} (str "[" shortcut "] ")]
    [:> Text {:color (when is-selected "blue") :bold is-selected} name]])
 
-(defn action-menu [{:keys [on-activate on-cancel]}]
+(defn action-menu [{:keys [actions on-activate on-cancel]}]
   ; (let [is-focused (.-isFocused (ink/useFocus))])
   [:<>
    ; [:> Box {:border-style "round"}]
@@ -221,7 +234,24 @@
   (let [[{:keys [navigation-stack modules]} dispatch] (react/useReducer reducer-fn nil init-state)
         route (peek navigation-stack)
         route-name (:name route)
-        focus-manager (ink/useFocusManager)]
+        focus-manager (ink/useFocusManager)
+        handle-action-selected (fn [{:keys [action module-name instances]}]
+                                 (cond
+                                   (< 1 (count (distinct-vals :module-version instances)))
+                                   (dispatch [:navigate {:name ::module-version-list
+                                                         :params {:action action
+                                                                  :module-name module-name
+                                                                  :instances instances}}])
+
+                                   (< 1 (count instances))
+                                   (dispatch [:navigate {:name ::kernel-version-list
+                                                         :params {:action action
+                                                                  :module-name module-name
+                                                                  :module-version (-> instances first :module-version)
+                                                                  :instances instances}}])
+
+                                   :else
+                                   (run-module-command action instances)))]
     ;; Switch focus next to switch focus from the global key handling to the module list
     (react/useEffect
      (fn []
@@ -292,27 +322,14 @@
           [:> Box
            [:> Text "Select action for: "]
            [:> Text {:color "green"} module-name]]
-          [action-menu {:on-activate (fn [action]
-                                       (cond
-                                         (= (:id action) "export")
+          [action-menu {:actions actions
+                        :on-activate (fn [action]
+                                       (if (= (:id action) "export")
                                          (dispatch [:navigate {:name ::module-export-actions
                                                                :params (:params route)}])
-
-                                         (< 1 (count (distinct-vals :module-version instances)))
-                                         (dispatch [:navigate {:name ::module-version-list
-                                                               :params {:action action
-                                                                        :module-name module-name
-                                                                        :instances instances}}])
-
-                                         (< 1 (count instances))
-                                         (dispatch [:navigate {:name ::kernel-version-list
-                                                               :params {:action action
-                                                                        :module-name module-name
-                                                                        :module-version (-> instances first :module-version)
-                                                                        :instances instances}}])
-
-                                         :else
-                                         (run-module-command action instances)))
+                                         (handle-action-selected {:action action
+                                                                  :module-name module-name
+                                                                  :instances instances})))
                         :on-cancel #(dispatch [:navigate-back])}]])
 
        ::module-version-list
@@ -362,16 +379,18 @@
                                                                                         (filter #(= module (:module %))))}]))}]]
 
        ::module-export-actions
-       [:> Box {:margin-x 1}
-        [:f> selectable-list {:items export-actions
-                              :item-component
-                              (fn [{:keys [id]} {:keys [is-selected]}]
-                                [:> Box
-                                 [:> Text {:color (when is-selected "blue") :bold is-selected} id]])
-                              :on-activate (fn [{:keys [id]}]
-                                             ;; TODO
-                                             #_(run-sh "sudo" "dkms" id))
-                              :on-cancel #(dispatch [:navigate-back])}]]
+       (let [{:keys [module-name instances]} (:params route)]
+         [:> Box {:margin-x 1
+                  :flex-direction "column"}
+          [:> Box
+           [:> Text "Select action for: "]
+           [:> Text {:color "green"} module-name]]
+          [action-menu {:actions export-actions
+                        :on-activate (fn [action]
+                                       (handle-action-selected {:action action
+                                                                :module-name module-name
+                                                                :instances instances}))
+                        :on-cancel #(dispatch [:navigate-back])}]])
 
        nil)
 
