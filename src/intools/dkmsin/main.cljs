@@ -3,12 +3,11 @@
             [reagent.core :as r]
             [react]
             [ink :refer [Box Text]]
-            [intools.views :refer [selectable-list action-bar]]
+            [intools.views :refer [selectable-list action-bar uncontrolled-text-input]]
             [intools.shell :refer [sh]]
             ; [intools.hooks :refer [use-fullscreen]]
             [intools.dkmsin.actions :as actions]
-            [intools.dkmsin.model :as model]
-            [ink-text-input :refer [UncontrolledTextInput]]))
+            [intools.dkmsin.model :as model]))
             ; [ink-select-input :refer [default] :rename {default SelectInput}]))
 
 (defonce !app (atom nil))
@@ -45,6 +44,14 @@
     :shortcut-label "enter"}
    {:name "Nav"
     :shortcut-label "↑↓"}
+   {:name "Back"
+    :shortcut-label "esc"}
+   {:name "Quit"
+    :shortcut "ctrl+c"}])
+
+(def command-input-actions
+  [{:name "Run"
+    :shortcut-label "enter"}
    {:name "Back"
     :shortcut-label "esc"}
    {:name "Quit"
@@ -90,6 +97,10 @@
      :args "mkkmp [module/module-version] [--spec specfile]"}]
    (mapv (fn [{:keys [id] :as item}]
            (assoc item :name id)))))
+
+(def action-add
+  {:id "add"
+   :args "add [module/module-version] [/path/to/source-tree] [/path/to/tarball.tar]"})
 
 (defn init-state []
   {:navigation-stack (list {:name ::module-list})
@@ -209,10 +220,13 @@
     :sh (with-terminal-output
           #(apply run-sh arg))))
 
+(defn command-params [{:keys [command module module-version kernel-version arch]}]
+  ["sudo" "dkms" command (str module "/" module-version) "-k" (str kernel-version "/" arch)])
+
 (defn run-module-command [{:keys [id] :as _action} instances]
   (with-terminal-output
-    #(doseq [{:keys [module module-version kernel-version arch]} instances]
-       (run-sh "sudo" "dkms" id (str module "/" module-version) "-k" (str kernel-version "/" arch)))))
+    #(doseq [instance instances]
+       (apply run-sh (command-params (assoc instance :command id))))))
 
 (defn action-row [{:keys [name shortcut]} {:keys [is-selected]}]
   [:> Box
@@ -227,7 +241,13 @@
     [:f> selectable-list {:items actions
                           :item-component action-row
                           :on-activate on-activate
-                          :on-cancel on-cancel}]]])
+                          :on-cancel on-cancel
+                          :on-input (fn [input _key]
+                                      (some->> actions
+                                               (some (fn [{:keys [shortcut] :as action}]
+                                                       (when (= shortcut input)
+                                                         action)))
+                                               (on-activate)))}]]])
 
 (defn app []
   ; (use-fullscreen)
@@ -250,6 +270,12 @@
                                                                   :module-version (-> instances first :module-version)
                                                                   :instances instances}}])
 
+                                   (:args action)
+                                   (dispatch [:navigate {:name ::command-input
+                                                         :params {:command-text (str/join " " (command-params (assoc (first instances)
+                                                                                                                     :command (:id action))))
+                                                                  :args (:args action)}}])
+
                                    :else
                                    (run-module-command action instances)))]
     ;; Switch focus next to switch focus from the global key handling to the module list
@@ -266,7 +292,9 @@
                             tabs)]
          (dispatch [:navigate-replace {:name route}])
          (case input
-           "m" (dispatch [:navigate {:name ::module-add}])
+           "m" (dispatch [:navigate {:name ::command-input
+                                     :params {:command-text "sudo dkms add"
+                                              :args (:args action-add)}}])
            "i" (run-fx! (actions/autoinstall))
            nil))))
     [:> Box {:flex-direction "column"}
@@ -309,11 +337,23 @@
                                              (dispatch [:select-module {:module-name module
                                                                         :instances [selected]}]))}]]
 
-       ::module-add
-       [:> Box
-        [:> Box {:margin-right 1}
-         [:> Text "Module path:"]]
-        [:> UncontrolledTextInput {:on-submit #(run-fx! (actions/add %))}]]
+       ::command-input
+       (let [{:keys [command-text args]} (:params route)]
+         [:> Box {:margin-x 1
+                  :flex-direction "column"}
+
+          [:> Text "Edit your command and press [enter] to run:"]
+          [:> Box
+           [:> Text "$ "]
+           [:f> uncontrolled-text-input {:on-submit (fn [s]
+                                                      (with-terminal-output
+                                                        #(apply run-sh (-> s (str/trim) (str/split #"\s+")))))
+                                         :on-cancel #(dispatch [:navigate-back])
+                                         :default-value (str command-text " ")}]]
+          [:> Box {:margin-top 1}
+           [:> Text "Available options:"]]
+          [:> Box {:margin-left 2}
+           [:> Text args]]])
 
        ::module-actions
        (let [{:keys [module-name instances]} (:params route)]
@@ -397,6 +437,7 @@
      [action-bar
       (case route-name
         (::module-actions ::kernel-version-list) selectable-list-actions
+        ::command-input command-input-actions
 
         global-actions)]]))
 
