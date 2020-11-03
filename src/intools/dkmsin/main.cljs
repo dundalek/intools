@@ -29,9 +29,11 @@
     :shortcut-label "enter"}
    ; {:name "Search"
    ;  :shortcut "/"}
-   {:name "Add module"
+   {:id "add-module"
+    :name "Add module"
     :shortcut "m"}
-   {:name "Autoinstall"
+   {:id "autoinstall"
+    :name "Autoinstall"
     :shortcut "i"}
    {:name "Nav"
     :shortcut-label "↑↓"}
@@ -56,6 +58,17 @@
     :shortcut-label "esc"}
    {:name "Quit"
     :shortcut "ctrl+c"}])
+
+(def kernel-actions
+  [{:id "show-modules"
+    :name "Show modules"
+    :shortcut "s"}
+   {:id "match-to"
+    :name "Install modules to ..."
+    :shortcut "t"}
+   {:id "match-from"
+    :name "Install modules from ..."
+    :shortcut "f"}])
 
 (def actions
   [{:id "build"
@@ -157,7 +170,7 @@
               {:module module
                :module-versions (reverse (distinct-vals :module-version items))
                :kernel-versions (reverse (distinct-vals :kernel-version items))
-               :arch (distinct-vals :arch items)
+               :archs (distinct-vals :arch items)
                :statuses (distinct-vals :status items)}))
        (sort-by :module)))
 
@@ -183,15 +196,15 @@
 
 (defn group-kernels [modules]
   (->> modules
-       (group-by :kernel-version)
-       (map (fn [[kernel-version items]]
+       (group-by (juxt :kernel-version :arch))
+       (sort-by first #(compare %2 %1))
+       (map (fn [[[kernel-version arch] items]]
               {:kernel-version kernel-version
+               :arch arch
                :modules (distinct-vals :module items)
-               :archs (distinct-vals :arch items)
-               :statuses (distinct-vals :status items)}))
-       (sort-by :kernel-version #(compare %2 %1))))
+               :statuses (distinct-vals :status items)}))))
 
-(defn kernel-row [{:keys [kernel-version modules archs statuses]} {:keys [is-selected]}]
+(defn kernel-row [{:keys [kernel-version arch modules statuses]} {:keys [is-selected]}]
   [:> Box
    [:> Text {:color "green" :wrap "truncate-end" :bold is-selected} kernel-version]
    [:> Text " "]
@@ -199,7 +212,7 @@
    [:> Text {:wrap "truncate-end" :bold is-selected} (str (count modules) " module(s)")]
    [:> Text " "]
    [:> ink/Spacer]
-   [:> Text {:wrap "truncate-end" :bold is-selected} (str/join ", " archs)]
+   [:> Text {:wrap "truncate-end" :bold is-selected} arch]
    [:> Text " "]
    [:> ink/Spacer]
    [:> Text {:color "red" :wrap "truncate-end" :bold is-selected} (str/join ", " statuses)]])
@@ -286,17 +299,18 @@
      #js [])
     (ink/useInput
      (fn [input _key]
-       (if-let [route (some (fn [{:keys [shortcut route]}]
-                              (when (= shortcut input)
-                                route))
-                            tabs)]
-         (dispatch [:navigate-replace {:name route}])
-         (case input
-           "m" (dispatch [:navigate {:name ::command-input
-                                     :params {:command-text "sudo dkms add"
-                                              :args (:args action-add)}}])
-           "i" (run-fx! (actions/autoinstall))
-           nil))))
+       (if-let [matched (some (fn [{:keys [shortcut] :as item}]
+                                (when (and shortcut (= shortcut input))
+                                  item))
+                              (concat tabs global-actions))]
+         (if-let [route (:route matched)]
+           (dispatch [:navigate-replace {:name route}])
+           (case (:id matched)
+             "add-module" (dispatch [:navigate {:name ::command-input
+                                                :params {:command-text "sudo dkms add"
+                                                         :args (:args action-add)}}])
+             "autoinstall" (run-fx! (actions/autoinstall))
+             nil)))))
     [:> Box {:flex-direction "column"}
      [:> Box {:border-style "round"}
       (->> tabs
@@ -323,10 +337,10 @@
                 :flex-direction "column"}
         [:f> selectable-list {:items (group-kernels modules)
                               :item-component kernel-row
-                              :on-activate (fn [{:keys [kernel-version]}]
-                                             (dispatch [:navigate {:name ::kernel-module-list
-                                                                   :params {:instances (->> modules
-                                                                                            (filter #(= kernel-version (:kernel-version %))))}}]))}]]
+                              :on-activate (fn [{:keys [kernel-version arch]}]
+                                             (dispatch [:navigate {:name ::kernel-actions
+                                                                   :params {:kernel-version kernel-version
+                                                                            :arch arch}}]))}]]
 
        ::instance-list
        [:> Box {:margin-x 1
@@ -354,6 +368,50 @@
            [:> Text "Available options:"]]
           [:> Box {:margin-left 2}
            [:> Text args]]])
+
+       ::kernel-actions
+       (let [{:keys [kernel-version arch]} (:params route)]
+         [:> Box {:margin-x 1
+                  :flex-direction "column"}
+          [:> Box
+           [:> Text "Select action for: "]
+           [:> Text {:color "green"} (str kernel-version "/" arch)]]
+          [action-menu {:actions kernel-actions
+                        :on-activate (fn [action]
+                                       (if (= (:id action) "show-modules")
+                                         (dispatch [:navigate {:name ::kernel-module-list
+                                                               :params {:instances (->> modules
+                                                                                        (filter #(and (= kernel-version (:kernel-version %))
+                                                                                                      (= arch (:arch %)))))}}])
+                                         (dispatch [:navigate {:name ::kernel-target-selection
+                                                               :params {:action action
+                                                                        :kernel-version kernel-version
+                                                                        :arch arch
+                                                                        :kernels (->> (group-kernels modules)
+                                                                                      (filter #(or (not= kernel-version (:kernel-version %))
+                                                                                                   (not= arch (:arch %)))))}}])))
+                        :on-cancel #(dispatch [:navigate-back])}]])
+
+       ::kernel-target-selection
+       (let [{:keys [action kernels] :as source} (:params route)]
+         [:> Box {:margin-x 1
+                  :flex-direction "column"}
+          [:> Box
+           [:> Text (:name action)]]
+          [:f> selectable-list
+           {:items kernels
+            :item-component (fn [{:keys [kernel-version arch]} {:keys [is-selected]}]
+                              [:> Box
+                               [:> Text {:color "green" :wrap "truncate-end" :bold is-selected} kernel-version]
+                               [:> Text " "]
+                               [:> ink/Spacer]
+                               [:> Text {:wrap "truncate-end" :bold is-selected} arch]])
+            :on-cancel #(dispatch [:navigate-back])
+            :on-activate (fn [target]
+                           (run-fx!
+                             (case (:id action)
+                               "match-to" (actions/match source target)
+                               "match-from" (actions/match target source))))}]])
 
        ::module-actions
        (let [{:keys [module-name instances]} (:params route)]
@@ -413,6 +471,7 @@
                 :flex-direction "column"}
         [:f> selectable-list {:items (group-modules (-> route :params :instances))
                               :item-component module-row
+                              :on-cancel #(dispatch [:navigate-back])
                               :on-activate (fn [{:keys [module]}]
                                              (dispatch [:select-module {:module-name module
                                                                         :instances (->> route :params :instances
@@ -449,7 +508,8 @@
   (render))
 
 (defn ^:dev/after-load reload! []
-  (render))
+  (.rerender ^js/InkInstance @!app (r/as-element [:f> app]))
+  #_(render))
 
 (comment
 
