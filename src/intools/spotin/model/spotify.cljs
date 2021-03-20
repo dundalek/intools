@@ -1,4 +1,4 @@
-(ns intools.spotin.model
+(ns intools.spotin.model.spotify
   (:require [clojure.string :as str]))
 
 (def fsp (js/require "fs/promises"))
