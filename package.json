@@ -4,9 +4,11 @@
     "ink-text-input": "4.0.1",
     "react": "16.13.0",
     "react-dom": "16.13.0",
-    "shadow-cljs": "2.11.6"
+    "request": "^2.88.2",
+    "request-promise-native": "^1.0.9"
   },
   "devDependencies": {
+    "shadow-cljs": "2.11.6",
     "source-map-support": "^0.5.19"
   },
   "scripts": {

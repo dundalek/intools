@@ -17,4 +17,8 @@
 
   :resticin {:target :node-script
              :output-to "target/resticin.js"
-             :main intools.resticin.main/-main}}}
+             :main intools.resticin.main/-main}
+
+  :spotin {:target :node-script
+           :output-to "target/spotin.js"
+           :main intools.spotin.main/-main}}}

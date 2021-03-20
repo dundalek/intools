@@ -4,9 +4,9 @@
             [ink-text-input :refer [default] :rename {default TextInput}]))
             ; [ink-select-input :refer [default] :rename {default SelectInput}]))
 
-(defn selectable-list [{:keys [items item-component on-activate on-cancel on-input]}]
+(defn use-selectable-list [{:keys [items on-activate on-toggle on-cancel on-input auto-focus]}]
   (let [[selected-index set-selected-index] (react/useState 0)
-        is-focused (.-isFocused (ink/useFocus #js{:autoFocus true}))]
+        is-focused (.-isFocused (ink/useFocus (if auto-focus #js{:autoFocus true} #js{})))]
     (ink/useInput
      (fn [input ^js key]
        (when is-focused
@@ -17,8 +17,15 @@
                             (on-activate (nth items selected-index)))
            (.-escape key) (when on-cancel
                             (on-cancel))
+           (= input " ") (when on-toggle
+                           (on-toggle (nth items selected-index)))
            :else (when on-input
                    (on-input input key))))))
+    {:selected-index selected-index
+     :is-focused is-focused}))
+
+(defn selectable-list [{:keys [items item-component] :as props}]
+  (let [{:keys [selected-index]} (use-selectable-list (dissoc props :item-component))]
     [:> Box {:flex-direction "column"}
      (->> items
           (map-indexed
