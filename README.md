@@ -3,7 +3,7 @@
 ```
 
 npx shadow-cljs watch dkmsin
-node target/resticin.js
+node target/dkmsin.js
 
 npx shadow-cljs watch flatpakin
 node target/flatpakin.js

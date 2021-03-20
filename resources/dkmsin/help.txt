@@ -1,0 +1,45 @@
+
+
+
+entities
+  Module - versions
+  Kernels - versions
+
+  modules 1:N kernels
+
+
+add into tree -
+
+/usr/src/<module>-<module-version>
+pass path will be copied
+or tarball
+
+ creating a symlink from /var/lib/dkms
+
+
+Although build expects a kernel-version parameter, if this kernel name is left out, it assumes the currently running kernel. However, building modules for kernels not currently running also is a viable option.
+
+
+
+
+Module state:
+
+             add            build             install
+ NotInTree  ----->  Added  ------->  Built  ----------->  Installed
+     ^                |                |    <-----------      |
+     |                |                |      uninstall       |
+     |                |                |                      |
+     \----------------+----------------+----------------------/
+           remove           remove             remove
+
+Actions:
+
+  autoinstall
+  add        Adds a module source into tree
+  match
+
+
+  build      Builds a module
+  install    Installs built module into kernel
+  uninstall  Removes a module from kernel
+  remove     Removes a module from the tree

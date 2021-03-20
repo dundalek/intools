@@ -10,7 +10,10 @@
 (defonce !app (atom nil))
 (declare render)
 
-(def date-format (DateTimeFormat. "y-MM-dd HH:mm:ss"))
+(def format-date
+  (let [formatter (DateTimeFormat. "y-MM-dd HH:mm:ss")]
+    (fn [date]
+      (.format formatter date))))
 
 (def tabs
   [{:name "Snapshots"
@@ -19,14 +22,14 @@
    {:name "Files"
     :shortcut "2"
     :route ::files}
-   ;; should keys be top-level or under settings?
-   {:name "Keys"
-    :shortcut "3"
-    :route ::keys}
    ;; Health, Options, Setting, Misc
    {:name "Health"
-    :shortcut "4"
+    :shortcut "3"
     :route ::health}
+   ;; should keys be top-level or under settings?
+   {:name "Keys"
+    :shortcut "4"
+    :route ::keys}
    {:name "Objects"
     :shortcut "5"
     :route ::objects}])
@@ -96,7 +99,7 @@
    [:> Text {:color "green" :wrap "truncate-end" :bold is-selected} short-id]
    [:> Text " "]
    [:> ink/Spacer]
-   [:> Text {:wrap "truncate-end" :bold is-selected} (.format date-format time)]
+   [:> Text {:wrap "truncate-end" :bold is-selected} (format-date time)]
    [:> Text " "]
    [:> ink/Spacer]
    [:> Text {:wrap "truncate-end" :bold is-selected} hostname]
@@ -119,7 +122,7 @@
    [:> Text {:wrap "truncate-end" :bold is-selected} host-name]
    [:> Text " "]
    [:> ink/Spacer]
-   [:> Text {:wrap "truncate-end" :bold is-selected} (.format date-format created)]])
+   [:> Text {:wrap "truncate-end" :bold is-selected} (format-date created)]])
 
 (defn app []
   (let [[{:keys [route items]} dispatch] (react/useReducer reducer-fn nil init-state)
@@ -218,4 +221,4 @@
   (render))
 
 (defn ^:dev/after-load reload! []
-  (render))
+  (.rerender ^js/InkInstance @!app (r/as-element [:f> app])))
