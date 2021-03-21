@@ -3,7 +3,6 @@
             [react]
             [ink :refer [Box Text]]
             [intools.spotin.model.spotify :as spotify]
-            [intools.spotin.model.playlist :as playlist]
             [intools.hooks :as hooks]
             [intools.spotin.components.action-menu :refer [action-menu]]
             [intools.spotin.components.input-bar :refer [input-bar]]
@@ -13,67 +12,57 @@
             [intools.spotin.components.tracks-panel :refer [tracks-panel]]
             [re-frame.core :as rf :refer [dispatch subscribe]]
             [intools.spotin.app.events]
+            [intools.spotin.app.fx]
             [intools.spotin.app.subs]))
 
 (defonce !app (atom nil))
 (declare render)
 
 (def player-actions
-  [{:id "play-pause"
+  [{:id :play-pause
     :name "play/pause"
     :shortcut "z"}
-   {:id "next"
+   {:id :next
     :name "next"
     :shortcut "n"}
-   {:id "previous"
+   {:id :previous
     :name "previous"
     :shortcut "b"}
-   {:id "shuffle"
+   {:id :shuffle
     :name "shuffle"}
-   {:id "repeat"
+   {:id :repeat
     :name "repeat"}])
 
 (def playlist-actions
-  [{:id "playlist-play"
+  [{:id :playlist-play
     :name "play"}
-   {:id "playlist-rename"
+   {:id :playlist-rename
     :name "rename"}
-   {:id "playlist-edit-description"
+   {:id :playlist-edit-description
     :name "edit description"}
-   {:id "playlist-make-public"
+   {:id :playlist-make-public
     :name "make public"}
-   {:id "playlist-delete"
+   {:id :playlist-delete
     :name "delete"}
-   {:id "playlist-share"
+   {:id :playlist-share
     :name "share"}])
 
 (def playlists-actions
-  [{:id "playlists-mix"
+  [{:id :playlists-mix
     :name "mix"}])
 
 (def track-actions
-  [{:id "like"
+  [{:id :like
     :name "Add to Liked Songs"}
-   {:id "add-to-library"
+   {:id :add-to-library
     :name "Add to Library"}
-   {:id "open-artist"
+   {:id :open-artist
     :name "Open artist"}
-   {:id "open-album"
+   {:id :open-album
     :name "Open album"}])
 
 (def action-separator
   {:name ""})
-
-(defn dispatch-action! [{:keys [id arg]}]
-  (case id
-    "play-pause" (spotify/player-play-pause+)
-    "next" (spotify/player-next+)
-    "previous" (spotify/player-previous+)
-    "shuffle" (spotify/player-toggle-shuffle+)
-    "repeat" (spotify/player-toggle-repeat+)
-    "playlist-play" (spotify/player-play+ {:context_uri (:uri arg)})
-    "playlist-share" (js/console.log "Playlist URI:" (:uri arg))
-    "playlists-mix" (playlist/create-mixed-playlist+ arg)))
 
 (defn library-panel []
   (let [focused? (.-isFocused (ink/useFocus))]
@@ -95,10 +84,10 @@
           ; "x" (dispatch (if actions
                           ; [:close-action-menu]
                           ; [:open-action-menu player-actions]))
-          (some->> player-actions
-                   (some (fn [{:keys [shortcut] :as action}]
-                           (when (= shortcut input) action)))
-                   (dispatch-action!)))))
+          (when-some [action (some (fn [{:keys [shortcut] :as action}]
+                                     (when (= shortcut input) action))
+                                   player-actions)]
+            (dispatch [:run-action action])))))
     [:> Box {:width (:cols size)
              :height (dec (:rows size))
              :flex-direction "column"}
@@ -129,9 +118,9 @@
                           :on-activate (fn [{:keys [id arg] :as action}]
                                          (dispatch [:close-action-menu])
                                          (case id
-                                           "playlist-rename" (dispatch [:playlist-rename arg])
-                                           "playlist-edit-description" (dispatch [:playlist-edit-description arg])
-                                           (dispatch-action! action)))
+                                           :playlist-rename (dispatch [:playlist-rename arg])
+                                           :playlist-edit-description (dispatch [:playlist-edit-description arg])
+                                           (dispatch [:run-action action])))
                           :on-cancel #(dispatch [:close-action-menu])}])
       [:> Box {:width "20%"
                :flex-direction "column"}
@@ -162,7 +151,7 @@
                                            {:context_uri (:uri playlist)
                                             :offset {:uri (-> item :track :uri)}})))}]]
                                                  ;;:uris [(:uri track)]})))}]]
-     [:f> status-bar]
+     #_[:f> status-bar]
      [shortcuts-bar {:actions player-actions}]]))
 
 (defn render []

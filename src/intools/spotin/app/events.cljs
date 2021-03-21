@@ -1,5 +1,5 @@
 (ns intools.spotin.app.events
-  (:require [re-frame.core :refer [reg-event-db]]
+  (:require [re-frame.core :refer [reg-event-db reg-event-fx]]
             [intools.spotin.app.db :as db]))
 
 (reg-event-db :intitialize-db
@@ -49,3 +49,6 @@
     (assoc db :active-input-panel {:type :playlist-edit-description
                                    :arg arg})))
 
+(reg-event-fx :run-action
+  (fn [_ [_ {:keys [id arg]}]]
+    {id arg}))
