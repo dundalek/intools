@@ -11,4 +11,5 @@
           (map (fn [{:keys [shortcut name]}]
                  (str shortcut ": " name)))
           (str/join ", "))
+     ", u: back"
      ", q: quit"]])

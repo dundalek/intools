@@ -218,6 +218,12 @@
 (defn playlist-unfollow+ [playlist-id]
   (delete+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id) "/followers")))
 
+(defn get-album+ [album-id]
+  (cached-get+ (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id))))
+
+(defn get-album-tracks+ [album-id]
+  (cached-get+ (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id) "/tracks")))
+
 (defn get-player+ []
   (authorized-get+ "https://api.spotify.com/v1/me/player"))
 

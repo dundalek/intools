@@ -2,11 +2,26 @@
   (:require [re-frame.core :refer [reg-event-db reg-event-fx]]
             [intools.spotin.app.db :as db]))
 
+(defn router-navigate [db route]
+  (update db :routes conj route))
+
+(defn router-back [db]
+  (cond-> db
+    (seq (:routes db)) (update :routes pop)))
+
 (reg-event-fx :spotin/init
   (fn [_ _]
     {:db db/default-db
      :fx [[:spotin/load-cached-playlists nil]
           [:spotin/refresh-playlists nil]]}))
+
+(reg-event-db :spotin/router-navigate
+  (fn [db [_ route]]
+     (router-navigate db route)))
+
+(reg-event-db :spotin/router-back
+  (fn [db _]
+    (router-back db)))
 
 (reg-event-fx :spotin/refresh-playlists
   (fn [_ _]
@@ -22,7 +37,7 @@
                                                    (assoc m id item))
                                                 {})))]
       (cond-> {:db new-db}
-        (and (not selected-playlist) first-playlist-id)
+        #_#_(and (not selected-playlist) first-playlist-id)
         (assoc :dispatch [:set-selected-playlist first-playlist-id]))))
 
 (reg-event-fx :set-playlists
@@ -40,8 +55,19 @@
 
 (reg-event-fx :set-selected-playlist
   (fn [{db :db} [_ playlist-id]]
-    {:db (assoc db :selected-playlist playlist-id)
+    {:db (router-navigate db {:name :playlist
+                              :params {:playlist-id playlist-id}})
      :spotin/load-playlist-tracks playlist-id}))
+
+(reg-event-fx :spotin/open-album
+  (fn [{db :db} [_ album-id]]
+    {:db (router-navigate db {:name :album
+                              :params {:album-id album-id}})
+     :spotin/load-album album-id}))
+
+(reg-event-db :spotin/set-album
+  (fn [db [_ album-id album]]
+    (assoc-in db [:albums album-id] album)))
 
 (reg-event-db :open-action-menu
   (fn [db [_ menu]]

@@ -5,6 +5,7 @@
             [intools.spotin.model.spotify :as spotify]
             [intools.hooks :as hooks]
             [intools.spotin.components.action-menu :refer [action-menu]]
+            [intools.spotin.components.album-panel :refer [album-panel]]
             [intools.spotin.components.input-bar :refer [input-bar]]
             [intools.spotin.components.playlists-panel :refer [playlists-panel]]
             [intools.spotin.components.shortcuts-bar :refer [shortcuts-bar]]
@@ -54,14 +55,14 @@
     :name "mix"}])
 
 (def track-actions
-  [{:id :like
-    :name "Add to Liked Songs"}
-   {:id :add-to-library
-    :name "Add to Library"}
-   {:id :open-artist
-    :name "Open artist"}
+  [{:id :open-artist
+    :name "open artist"}
    {:id :open-album
-    :name "Open album"}])
+    :name "open album"}
+   {:id :like
+    :name "add to Liked Songs"}
+   {:id :add-to-library
+    :name "add to Library"}])
 
 (def action-separator
   {:name ""})
@@ -77,12 +78,14 @@
   (let [app (ink/useApp)
         size (hooks/use-window-size)
         focus-manager (ink/useFocusManager)
-        {:keys [playlist-order playlists selected-playlist playlist-tracks actions active-input-panel]} @(subscribe [:db])]
+        {:keys [playlist-order playlists playlist-tracks actions active-input-panel]} @(subscribe [:db])
+        current-route @(subscribe [:spotin/current-route])]
     (ink/useInput
       (fn [input _key]
         (case input
           "q" (do (.exit app)
                   (.exit js/process))
+          "u" (dispatch [:spotin/router-back])
           ; "x" (dispatch (if actions
                           ; [:close-action-menu]
                           ; [:open-action-menu player-actions]))
@@ -125,6 +128,7 @@
                                            :playlist-rename (dispatch [:playlist-rename arg])
                                            :playlist-edit-description (dispatch [:playlist-edit-description arg])
                                            :playlist-unfollow (dispatch [:playlist-unfollow (:id arg)])
+                                           :open-album (dispatch [:spotin/open-album (-> arg :track :album :id)])
                                            (dispatch [:run-action action])))
                           :on-cancel #(dispatch [:close-action-menu])}])
       [:> Box {:width "20%"
@@ -142,20 +146,26 @@
                                                                player-actions)]
                                           (dispatch [:open-action-menu actions])))
                               :on-activate (fn [{:keys [id]}]
-                                            (dispatch [:set-selected-playlist id])
-                                            (-> (spotify/get-playlist-tracks+ id)
-                                                (.then (fn [body]
-                                                          (dispatch [:set-playlist-tracks id (-> body (js->clj :keywordize-keys true) :items)])))))}]]
-
-      [:f> tracks-panel {:playlist (get playlists selected-playlist)
-                         :tracks (get playlist-tracks selected-playlist)
-                         :on-menu #(dispatch [:open-action-menu (concat track-actions [action-separator] player-actions)])
-                         :on-activate (fn [item]
-                                        (let [playlist (get playlists selected-playlist)]
-                                          (spotify/player-play+
-                                           {:context_uri (:uri playlist)
-                                            :offset {:uri (-> item :track :uri)}})))}]]
-                                                 ;;:uris [(:uri track)]})))}]]
+                                            (dispatch [:set-selected-playlist id]))}]]
+      (case (:name current-route)
+        :playlist
+        (let [{:keys [playlist-id]} (:params current-route)]
+          [:f> tracks-panel {:playlist (get playlists playlist-id)
+                             :tracks (get playlist-tracks playlist-id)
+                             :on-menu (fn [item]
+                                        (let [track-actions (map #(assoc % :arg item) track-actions)
+                                              actions (concat track-actions [action-separator] player-actions)]
+                                          (dispatch [:open-action-menu actions])))
+                             :on-activate (fn [item]
+                                            (let [playlist (get playlists playlist-id)]
+                                              (spotify/player-play+
+                                               {:context_uri (:uri playlist)
+                                                :offset {:uri (-> item :track :uri)}})))}])
+                                                     ;;:uris [(:uri track)]})))}]]
+        :album
+        (let [{:keys [album-id]} (:params current-route)]
+          [:f> album-panel {:album @(subscribe [:spotin/album-by-id album-id])}])
+        nil)]
      #_[:f> status-bar]
      [shortcuts-bar {:actions player-actions}]]))
 

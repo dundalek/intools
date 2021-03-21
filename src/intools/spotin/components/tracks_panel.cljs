@@ -56,7 +56,7 @@
       (fn [input _key]
         (when is-focused
           (case input
-            "x" (when on-menu (on-menu))
+            "x" (when on-menu (on-menu (nth tracks selected-index)))
             nil))))
     [:> Box {:flex-direction "column"
              :flex-grow 1
