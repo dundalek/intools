@@ -1,5 +1,6 @@
 (ns intools.spotin.model.spotify
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [clojure.edn :as edn]))
 
 (def fsp (js/require "fs/promises"))
 (def rp (js/require "request-promise-native"))
@@ -93,6 +94,8 @@
                       (.then #(authorized-request+ opts)))
                   (throw e))))))
 
+(def request+ request-with-auto-refresh+)
+
 (defn authorized-put+
   ([url] (authorized-put+ url nil))
   ([url body]
@@ -108,26 +111,47 @@
                                         :url url
                                         :json true}
                                   (some? body) (assoc :body (clj->js body))))))
-(defn with-cached-json+ [k f]
-  (let [path (str ".cache/" k ".json")]
-    (-> (.readFile fsp path "utf-8")
-        (.then #(js/JSON.parse %))
-        (.catch (fn [_e]
-                  (-> (f)
-                      (.then (fn [body]
-                               (-> (.writeFile fsp path (js/JSON.stringify body nil 2))
-                                   (.then (fn [] body)))))))))))
 
-#_(defn with-cached-json+ [k f]
-    (let [path (str ".cache/" k ".json")]
-      (if (.existsSync fs path)
-        (-> (.readFileSync fs path "utf-8")
-            (js/JSON.parse)
-            (js/Promise.resolve))
-        (-> (f)
-            (.then (fn [body]
-                      (.writeFileSync fs path (js/JSON.stringify body nil 2))
-                      body))))))
+(defn cache-path [k]
+  (str ".cache/" k ".json"))
+
+(defn load-json+ [path]
+  (-> (.readFile fsp path "utf-8")
+      (.then #(js/JSON.parse %))))
+
+(defn store-json+ [path body]
+  (.writeFile fsp path (js/JSON.stringify body nil 2)))
+
+(defn load-cached-json+ [k]
+  (load-json+ (cache-path k)))
+
+(defn store-cached-json+ [k body]
+  (store-json+ (cache-path k) body))
+
+(defn load-cached-edn+ [k]
+  (-> (.readFile fsp (cache-path k) "utf-8")
+      (.then #(edn/read-string %))))
+
+(defn store-cached-edn+ [k body]
+  (.writeFile fsp (cache-path k) (prn-str body)))
+
+(defn cache-edn+ [k f]
+  (-> (js/Promise.resolve)
+      (.then f)
+      (.then (fn [body]
+               (-> (store-cached-edn+ k body)
+                   (.then (fn [] body)))))))
+
+(defn cache-result+ [k f]
+  (-> (f)
+      (.then (fn [body]
+               (-> (store-json+ (cache-path k) body)
+                   (.then (fn [] body)))))))
+
+(defn with-cached-json+ [k f]
+  (-> (load-cached-json+ k)
+      (.catch (fn [_e]
+                (cache-result+ k f)))))
 
 (defn cache-key [url]
   (str/replace url #"[^\w+]" "_"))
@@ -137,12 +161,21 @@
                                :url url
                                :json true}))
 
+(defn get-request [url]
+  {:method "GET"
+   :url url
+   :json true})
+
+(defn get+ [url]
+  (request-with-auto-refresh+ (get-request url)))
+
 ;; TODO pass query params as map
 (defn cached-get+ [url]
   (with-cached-json+ (cache-key url)
-    #(request-with-auto-refresh+ {:method "GET"
-                                  :url url
-                                  :json true})))
+    #(get+ url)))
+
+(defn get-playlists []
+  (get-request "https://api.spotify.com/v1/me/playlists"))
 
 (defn get-playlists+ []
   (cached-get+ "https://api.spotify.com/v1/me/playlists"))
@@ -150,7 +183,7 @@
 (defn get-all-playlists+ []
   (let [!items (atom nil)]
     (letfn [(fetch-page+ [url]
-              (-> (cached-get+ url)
+              (-> (get+ url)
                   (.then (fn [body]
                            (let [{:keys [items next]} (js->clj body :keywordize-keys true)]
                               (swap! !items concat items)

@@ -45,7 +45,9 @@
    {:id :playlist-delete
     :name "delete"}
    {:id :playlist-share
-    :name "share"}])
+    :name "share"}
+   {:id :spotin/refresh-playlists
+    :name "refresh"}])
 
 (def playlists-actions
   [{:id :playlists-mix
@@ -158,15 +160,7 @@
   (reset! !app (ink/render (r/as-element [:f> app]))))
 
 (defn -main []
-  (rf/dispatch-sync [:initialize-db])
-  (-> (spotify/get-all-playlists+)
-      (.then (fn [{:keys [items]}]
-               (dispatch [:set-playlists items])
-               (when-let [id (-> items first :id)]
-                 (dispatch [:set-selected-playlist id])
-                 (-> (spotify/get-playlist-tracks+ id)
-                     (.then (fn [body]
-                               (dispatch [:set-playlist-tracks id (-> body (js->clj :keywordize-keys true) :items)]))))))))
+  (rf/dispatch-sync [:spotin/init])
   (render))
 
 (defn ^:dev/after-load reload! []

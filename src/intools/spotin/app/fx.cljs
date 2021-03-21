@@ -1,5 +1,5 @@
 (ns intools.spotin.app.fx
-  (:require [re-frame.core :refer [reg-fx]]
+  (:require [re-frame.core :refer [dispatch reg-fx]]
             [intools.spotin.model.spotify :as spotify]
             [intools.spotin.model.playlist :as playlist]))
 
@@ -27,3 +27,21 @@
 (reg-fx :playlists-mix
   (fn [arg] (playlist/create-mixed-playlist+ arg)))
 
+(reg-fx :spotin/load-cached-playlists
+  (fn [_]
+    (-> (spotify/load-cached-edn+ "get-all-playlists+")
+        (.then (fn [{:keys [items]}]
+                 (dispatch [:set-cached-playlists items]))
+               (fn [_ignore])))))
+
+(reg-fx :spotin/refresh-playlists
+    (fn [_]
+      (-> (spotify/cache-edn+ "get-all-playlists+" spotify/get-all-playlists+)
+          (.then (fn [{:keys [items]}]
+                   (dispatch [:set-playlists items]))))))
+
+(reg-fx :spotin/load-playlist-tracks
+  (fn [playlist-id]
+    (-> (spotify/get-playlist-tracks+ playlist-id)
+        (.then (fn [body]
+                  (dispatch [:set-playlist-tracks playlist-id (-> body (js->clj :keywordize-keys true) :items)]))))))

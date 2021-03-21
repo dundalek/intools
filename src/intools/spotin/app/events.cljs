@@ -2,26 +2,46 @@
   (:require [re-frame.core :refer [reg-event-db reg-event-fx]]
             [intools.spotin.app.db :as db]))
 
-(reg-event-db :intitialize-db
+(reg-event-fx :spotin/init
   (fn [_ _]
-    db/default-db))
+    {:db db/default-db
+     :fx [[:spotin/load-cached-playlists nil]
+          [:spotin/refresh-playlists nil]]}))
 
-(reg-event-db :set-playlists
-  (fn [db [_ playlists]]
-    (assoc db
-           :playlist-order (map :id playlists)
-           :playlists (->> playlists
-                           (reduce (fn [m {:keys [id] :as item}]
-                                      (assoc m id item))
-                                   {})))))
+(reg-event-fx :spotin/refresh-playlists
+  (fn [_ _]
+    {:spotin/refresh-playlists nil}))
+
+(defn set-playlists [db playlists]
+  (let [{:keys [selected-playlist]} db
+          first-playlist-id (-> playlists first :id)
+          new-db (assoc db
+                        :playlist-order (map :id playlists)
+                        :playlists (->> playlists
+                                        (reduce (fn [m {:keys [id] :as item}]
+                                                   (assoc m id item))
+                                                {})))]
+      (cond-> {:db new-db}
+        (and (not selected-playlist) first-playlist-id)
+        (assoc :dispatch [:set-selected-playlist first-playlist-id]))))
+
+(reg-event-fx :set-playlists
+  (fn [{db :db} [_ playlists]]
+    (set-playlists db playlists)))
+
+(reg-event-fx :set-cached-playlists
+  (fn [{db :db} [_ playlists]]
+    (when (empty? (:playlists db))
+      (set-playlists db playlists))))
 
 (reg-event-db :set-playlist-tracks
   (fn [db [_ playlist-id tracks]]
     (assoc-in db [:playlist-tracks playlist-id] tracks)))
 
-(reg-event-db :set-selected-playlist
-  (fn [db [_ playlist-id]]
-    (assoc db :selected-playlist playlist-id)))
+(reg-event-fx :set-selected-playlist
+  (fn [{db :db} [_ playlist-id]]
+    {:db (assoc db :selected-playlist playlist-id)
+     :spotin/load-playlist-tracks playlist-id}))
 
 (reg-event-db :open-action-menu
   (fn [db [_ menu]]
