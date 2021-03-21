@@ -10,7 +10,10 @@
             [intools.spotin.components.playlists-panel :refer [playlists-panel]]
             [intools.spotin.components.shortcuts-bar :refer [shortcuts-bar]]
             [intools.spotin.components.status-bar :refer [status-bar]]
-            [intools.spotin.components.tracks-panel :refer [tracks-panel]]))
+            [intools.spotin.components.tracks-panel :refer [tracks-panel]]
+            [re-frame.core :as rf :refer [dispatch subscribe]]
+            [intools.spotin.app.events]
+            [intools.spotin.app.subs]))
 
 (defonce !app (atom nil))
 (declare render)
@@ -61,7 +64,6 @@
 (def action-separator
   {:name ""})
 
-
 (defn dispatch-action! [{:keys [id arg]}]
   (case id
     "play-pause" (spotify/player-play-pause+)
@@ -72,58 +74,6 @@
     "playlist-play" (spotify/player-play+ {:context_uri (:uri arg)})
     "playlist-share" (js/console.log "Playlist URI:" (:uri arg))
     "playlists-mix" (playlist/create-mixed-playlist+ arg)))
-
-(defn init-state []
-  {:route {:name ::apps}
-   :playlists {}
-   :playlist-order []
-   :playlist-tracks {}
-   :selected-playlist nil
-   :action-menu nil
-   :input-panel nil})
-
-(defmulti reducer (fn [_state [event-name]] event-name))
-
-(defmethod reducer :navigate [state [_ route]]
-  (assoc state :route route))
-
-(defmethod reducer :set-playlists [state [_ playlists]]
-  (assoc state
-         :playlist-order (map :id playlists)
-         :playlists (->> playlists
-                         (reduce (fn [m {:keys [id] :as item}]
-                                    (assoc m id item))
-                                 {}))))
-
-(defmethod reducer :set-playlist-tracks [state [_ playlist-id tracks]]
-  (assoc-in state [:playlist-tracks playlist-id] tracks))
-
-(defmethod reducer :set-selected-playlist [state [_ playlist-id]]
-  (assoc state :selected-playlist playlist-id))
-
-(defmethod reducer :open-action-menu [state [_ menu]]
-  (assoc state :actions menu))
-
-(defmethod reducer :close-action-menu [state _]
-  (assoc state :actions nil))
-
-(defmethod reducer :open-input-panel [state [_ data]]
-  (assoc state :active-input-panel data))
-
-(defmethod reducer :close-input-panel [state _]
-  (assoc state :active-input-panel nil))
-
-(defmethod reducer :playlist-rename [state [_ arg]]
-  (assoc state :active-input-panel {:type :playlist-rename
-                                    :arg arg}))
-
-(defmethod reducer :playlist-edit-description [state [_ arg]]
-  (assoc state :active-input-panel {:type :playlist-edit-description
-                                    :arg arg}))
-
-;; useReducer does not work with multimethods
-(defn reducer-fn [state event]
-  (reducer state event))
 
 (defn library-panel []
   (let [focused? (.-isFocused (ink/useFocus))]
@@ -136,9 +86,7 @@
   (let [app (ink/useApp)
         size (hooks/use-window-size)
         focus-manager (ink/useFocusManager)
-
-        [{:keys [playlist-order playlists selected-playlist playlist-tracks actions active-input-panel]} dispatch]
-        (react/useReducer reducer-fn nil init-state)]
+        {:keys [playlist-order playlists selected-playlist playlist-tracks actions active-input-panel]} @(subscribe [:db])]
     (ink/useInput
       (fn [input _key]
         (case input
@@ -151,20 +99,6 @@
                    (some (fn [{:keys [shortcut] :as action}]
                            (when (= shortcut input) action)))
                    (dispatch-action!)))))
-    (react/useEffect
-      (fn []
-        ; (.focusNext focus-manager)
-        (-> (spotify/get-all-playlists+)
-            (.then (fn [{:keys [items]}]
-                     (dispatch [:set-playlists items])
-                     (when-let [id (-> items first :id)]
-                       (dispatch [:set-selected-playlist id])
-                       (-> (spotify/get-playlist-tracks+ id)
-                           (.then (fn [body]
-                                     (dispatch [:set-playlist-tracks id (-> body (js->clj :keywordize-keys true) :items)]))))))))
-
-        js/undefined)
-      #js [])
     [:> Box {:width (:cols size)
              :height (dec (:rows size))
              :flex-direction "column"}
@@ -231,16 +165,23 @@
      [:f> status-bar]
      [shortcuts-bar {:actions player-actions}]]))
 
-
-
-
 (defn render []
   (reset! !app (ink/render (r/as-element [:f> app]))))
 
 (defn -main []
+  (rf/dispatch-sync [:initialize-db])
+  (-> (spotify/get-all-playlists+)
+      (.then (fn [{:keys [items]}]
+               (dispatch [:set-playlists items])
+               (when-let [id (-> items first :id)]
+                 (dispatch [:set-selected-playlist id])
+                 (-> (spotify/get-playlist-tracks+ id)
+                     (.then (fn [body]
+                               (dispatch [:set-playlist-tracks id (-> body (js->clj :keywordize-keys true) :items)]))))))))
   (render))
 
 (defn ^:dev/after-load reload! []
+  (rf/clear-subscription-cache!)
   (.rerender ^js/InkInstance @!app (r/as-element [:f> app]))
   #_(render))
 

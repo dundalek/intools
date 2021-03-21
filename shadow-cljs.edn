@@ -2,7 +2,8 @@
  ["src"]
 
  :dependencies
- [[reagent "1.0.0-alpha2"]]
+ [[reagent "1.0.0"]
+  [re-frame "1.2.0"]]
 
  :nrepl {:port 34638}
 
