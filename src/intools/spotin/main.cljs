@@ -40,9 +40,9 @@
     :name "rename"}
    {:id :playlist-edit-description
     :name "edit description"}
-   {:id :playlist-make-public
-    :name "make public"}
-   {:id :playlist-delete
+   #_{:id :playlist-make-public
+      :name "make public"}
+   {:id :playlist-unfollow
     :name "delete"}
    {:id :playlist-share
     :name "share"}
@@ -99,8 +99,9 @@
          [:f> input-bar {:label (str "Rename playlist '" name "':")
                          :default-value name
                          :on-submit (fn [value]
-                                      ;; TODO invalidate current values
-                                      (spotify/playlist-rename+ id value)
+                                      ;; TODO invalidate current playlist via rf fx
+                                      (-> (spotify/playlist-rename+ id value)
+                                          (.then #(dispatch [:spotin/refresh-playlists])))
                                       (dispatch [:close-input-panel]))
                          :on-cancel #(dispatch [:close-input-panel])}])
        :playlist-edit-description
@@ -108,8 +109,9 @@
         [:f> input-bar {:label (str "Edit description for playlist '" name "':")
                         :default-value description
                         :on-submit (fn [value]
-                                     ;; TODO invalidate current values
-                                     (spotify/playlist-change-description+ id value)
+                                     ;; TODO invalidate current playlist via rf fx
+                                     (-> (spotify/playlist-change-description+ id value)
+                                         (.then #(dispatch [:spotin/refresh-playlists])))
                                      (dispatch [:close-input-panel]))
                         :on-cancel #(dispatch [:close-input-panel])}])
 
@@ -122,6 +124,7 @@
                                          (case id
                                            :playlist-rename (dispatch [:playlist-rename arg])
                                            :playlist-edit-description (dispatch [:playlist-edit-description arg])
+                                           :playlist-unfollow (dispatch [:playlist-unfollow (:id arg)])
                                            (dispatch [:run-action action])))
                           :on-cancel #(dispatch [:close-action-menu])}])
       [:> Box {:width "20%"

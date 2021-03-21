@@ -169,6 +169,14 @@
 (defn get+ [url]
   (request-with-auto-refresh+ (get-request url)))
 
+(defn delete-request [url]
+  {:method "DELETE"
+   :url url
+   :json true})
+
+(defn delete+ [url]
+  (request-with-auto-refresh+ (delete-request url)))
+
 ;; TODO pass query params as map
 (defn cached-get+ [url]
   (with-cached-json+ (cache-key url)
@@ -206,6 +214,9 @@
 
 (defn playlist-change-description+ [playlist-id description]
   (playlist-change+ playlist-id {:description description}))
+
+(defn playlist-unfollow+ [playlist-id]
+  (delete+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id) "/followers")))
 
 (defn get-player+ []
   (authorized-get+ "https://api.spotify.com/v1/me/player"))

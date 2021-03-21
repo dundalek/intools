@@ -25,7 +25,16 @@
   (fn [arg] (js/console.log "Playlist URI:" (:uri arg))))
 
 (reg-fx :playlists-mix
-  (fn [arg] (playlist/create-mixed-playlist+ arg)))
+  (fn [arg]
+    (-> (playlist/create-mixed-playlist+ arg)
+        ;; TODO: maybe only refresh the single playlist
+        (.then #(dispatch [:spotin/refresh-playlists])))))
+
+(reg-fx :playlist-unfollow
+  (fn [playlist-id]
+    (-> (spotify/playlist-unfollow+ playlist-id)
+        ;; TODO: maybe only refresh the single playlist
+        (.then #(dispatch [:spotin/refresh-playlists])))))
 
 (reg-fx :spotin/load-cached-playlists
   (fn [_]

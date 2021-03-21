@@ -62,12 +62,16 @@
 (reg-event-db :playlist-rename
   (fn [db [_ arg]]
     (assoc db :active-input-panel {:type :playlist-rename
-                                      :arg arg})))
+                                   :arg arg})))
 
 (reg-event-db :playlist-edit-description
   (fn [db [_ arg]]
     (assoc db :active-input-panel {:type :playlist-edit-description
                                    :arg arg})))
+
+(reg-event-fx :playlist-unfollow
+  (fn [_ [_ playlist-id]]
+    {:playlist-unfollow playlist-id}))
 
 (reg-event-fx :run-action
   (fn [_ [_ {:keys [id arg]}]]
