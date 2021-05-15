@@ -10,7 +10,8 @@
 
 (defn action-menu [{:keys [actions on-activate on-cancel]}]
   (let [{:keys [selected-index is-focused]}
-        (use-selectable-list {:items actions
+        (use-selectable-list {:focus-id "action-menu"
+                              :items actions
                               :on-activate on-activate
                               :on-cancel on-cancel
                               :auto-focus true})]

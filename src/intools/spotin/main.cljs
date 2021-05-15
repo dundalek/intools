@@ -19,6 +19,9 @@
 (defonce !app (atom nil))
 (declare render)
 
+(def action-separator
+  {:name ""})
+
 (def player-actions
   [{:id :play-pause
     :name "play/pause"
@@ -35,7 +38,10 @@
     :name "repeat"}])
 
 (def playlist-actions
-  [{:id :playlist-play
+  [{:id :playlist-open
+    :name "open"
+    :shortcut "⏎"}
+   {:id :playlist-play
     :name "play"}
    {:id :playlist-rename
     :name "rename"}
@@ -47,6 +53,9 @@
     :name "delete"}
    {:id :playlist-share
     :name "share"}
+   action-separator
+   {:id :spotin/open-random-playlist
+    :name "open random"}
    {:id :spotin/refresh-playlists
     :name "refresh"}])
 
@@ -64,22 +73,23 @@
    {:id :add-to-library
     :name "add to Library"}])
 
-(def action-separator
-  {:name ""})
 
 (defn library-panel []
-  (let [focused? (.-isFocused (ink/useFocus))]
+  (let [{:keys [is-focused]} (hooks/use-focus)]
     [:> Box {:border-style "single"
-             :border-color (when focused? "green")}
+             :border-color (when is-focused "green")}
         [:> Text "Panel 1"]]))
 
 (defn app []
   #_(hooks/use-fullscreen)
   (let [app (ink/useApp)
         size (hooks/use-window-size)
-        focus-manager (ink/useFocusManager)
         {:keys [playlist-order playlists playlist-tracks actions active-input-panel]} @(subscribe [:db])
-        current-route @(subscribe [:spotin/current-route])]
+        current-route @(subscribe [:spotin/current-route])
+        focused-component-id (cond
+                               actions "action-menu"
+                               active-input-panel "input-bar")
+        {:keys [focus-next]} (hooks/use-focus-manager {:focus-id focused-component-id})]
     (ink/useInput
       (fn [input _key]
         (case input
@@ -99,7 +109,8 @@
      (case (:type active-input-panel)
        :playlist-rename
        (let [{:keys [id name]} (:arg active-input-panel)]
-         [:f> input-bar {:label (str "Rename playlist '" name "':")
+         [:f> input-bar {:focus-id "input-bar"
+                         :label (str "Rename playlist '" name "':")
                          :default-value name
                          :on-submit (fn [value]
                                       ;; TODO invalidate current playlist via rf fx
@@ -109,7 +120,8 @@
                          :on-cancel #(dispatch [:close-input-panel])}])
        :playlist-edit-description
        (let [{:keys [id name description]} (:arg active-input-panel)]
-        [:f> input-bar {:label (str "Edit description for playlist '" name "':")
+        [:f> input-bar {:focus-id "input-bar"
+                        :label (str "Edit description for playlist '" name "':")
                         :default-value description
                         :on-submit (fn [value]
                                      ;; TODO invalidate current playlist via rf fx
@@ -121,16 +133,22 @@
        nil)
      [:> Box {:flex-grow 1}
       (when actions
-        [:f> action-menu {:actions actions
-                          :on-activate (fn [{:keys [id arg] :as action}]
-                                         (dispatch [:close-action-menu])
-                                         (case id
-                                           :playlist-rename (dispatch [:playlist-rename arg])
-                                           :playlist-edit-description (dispatch [:playlist-edit-description arg])
-                                           :playlist-unfollow (dispatch [:playlist-unfollow (:id arg)])
-                                           :open-album (dispatch [:spotin/open-album (-> arg :track :album :id)])
-                                           (dispatch [:run-action action])))
-                          :on-cancel #(dispatch [:close-action-menu])}])
+        [:f> action-menu
+         {:actions actions
+          :on-activate (fn [{:keys [id arg] :as action}]
+                         (dispatch [:close-action-menu])
+                         (case id
+                           :playlist-open (do
+                                            (dispatch [:set-selected-playlist (:id arg)])
+                                            (dispatch [:close-action-menu]))
+                           :playlist-rename (dispatch [:playlist-rename arg])
+                           :playlist-edit-description (dispatch [:playlist-edit-description arg])
+                           :playlist-unfollow (dispatch [:playlist-unfollow (:id arg)])
+                           :open-album (dispatch [:spotin/open-album (-> arg :track :album :id)])
+                           :spotin/open-random-playlist (do (dispatch [:spotin/open-random-playlist])
+                                                            (dispatch [:close-action-menu]))
+                           (dispatch [:run-action action])))
+          :on-cancel #(dispatch [:close-action-menu])}])
       [:> Box {:width "20%"
                :flex-direction "column"}
         #_[:f> library-panel]
@@ -146,10 +164,13 @@
                                                                player-actions)]
                                           (dispatch [:open-action-menu actions])))
                               :on-activate (fn [{:keys [id]}]
-                                            (dispatch [:set-selected-playlist id]))}]]
+                                            (dispatch [:set-selected-playlist id])
+                                            ;; Try to focus the tracks panel after playlist selected, it is a bit brittle
+                                            (focus-next))}]]
       (case (:name current-route)
         :playlist
         (let [{:keys [playlist-id]} (:params current-route)]
+          ^{:key playlist-id}
           [:f> tracks-panel {:playlist (get playlists playlist-id)
                              :tracks (get playlist-tracks playlist-id)
                              :on-menu (fn [item]

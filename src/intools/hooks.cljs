@@ -1,6 +1,7 @@
 (ns intools.hooks
   (:require [react]
-            [ink]))
+            [ink]
+            ["ink/build/components/FocusContext" :refer [default] :rename {default FocusContext}]))
 
 (def enterAltScreenCommand "\u001b[?1049h")
 (def leaveAltScreenCommand "\u001b[?1049l")
@@ -52,3 +53,60 @@
         js/undefined)
       #js [selected-index height])
     offset))
+
+(defn use-focus
+  ([] (use-focus {}))
+  ([{:keys [is-active auto-focus id]
+     :or {is-active true
+          auto-focus false
+          id nil}}]
+   (let [stdin (ink/useStdin)
+         context (react/useContext FocusContext)
+         id (react/useMemo #(or id
+                                (-> (Math/random) .toString (.slice 2 7)))
+                           #js [id])]
+
+     (react/useEffect
+       (fn []
+         (.add context id #js{:autoFocus auto-focus})
+         (fn []
+           (.remove context id)))
+       #js [id auto-focus])
+
+     (react/useEffect
+       (fn []
+         (if is-active
+           (.activate context id)
+           (.deactivate context id))
+         js/undefined)
+       #js [id is-active])
+
+     (react/useEffect
+       (fn []
+         (if (or (not (.-isRawModeSupported stdin))
+                 (not is-active))
+           js/undefined
+           (do (.setRawMode stdin true)
+               (fn []
+                 (.setRawMode stdin false)))))
+       #js [is-active])
+
+     {:is-focused (and (boolean id) (= (.-activeId context) id))})))
+
+(defn use-focus-manager [{:keys [focus-id]}]
+  (let [context (react/useContext FocusContext)
+        active-id (.-activeId context)]
+    (react/useEffect
+      (fn []
+        ;; This could get into infinite loop if the focusable does not exist
+        ;; Perhaps it would be good to implement cycle detection
+        (when (and focus-id (not= active-id focus-id))
+          (.focusNext context))
+        js/undefined)
+      #js [focus-id active-id])
+    {:enable-focus (.-enableFocus context)
+     :disable-focus (.-disableFocus context)
+     :focus-next(.-focusNext context)
+     :focus-previous (.-focusPrevious context)}))
+
+

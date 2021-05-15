@@ -1,12 +1,14 @@
 (ns intools.views
   (:require [react]
             [ink :refer [Box Text]]
-            [ink-text-input :refer [default] :rename {default TextInput}]))
+            [ink-text-input :refer [default] :rename {default TextInput}]
+            [intools.hooks :as hooks]))
             ; [ink-select-input :refer [default] :rename {default SelectInput}]))
 
-(defn use-selectable-list [{:keys [items on-activate on-toggle on-cancel on-input auto-focus]}]
+(defn use-selectable-list [{:keys [focus-id items on-activate on-toggle on-cancel on-input auto-focus]}]
   (let [[selected-index set-selected-index] (react/useState 0)
-        is-focused (.-isFocused (ink/useFocus (if auto-focus #js{:autoFocus true} #js{})))]
+        {:keys [is-focused]} (hooks/use-focus {:id focus-id
+                                               :auto-focus auto-focus})]
     (ink/useInput
      (fn [input ^js key]
        (when is-focused

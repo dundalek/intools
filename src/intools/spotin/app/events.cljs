@@ -53,11 +53,14 @@
   (fn [db [_ playlist-id tracks]]
     (assoc-in db [:playlist-tracks playlist-id] tracks)))
 
-(reg-event-fx :set-selected-playlist
-  (fn [{db :db} [_ playlist-id]]
-    {:db (router-navigate db {:name :playlist
+(defn select-playlist-fx [{db :db} playlist-id]
+  {:db (router-navigate db {:name :playlist
                               :params {:playlist-id playlist-id}})
-     :spotin/load-playlist-tracks playlist-id}))
+   :spotin/load-playlist-tracks playlist-id})
+
+(reg-event-fx :set-selected-playlist
+  (fn [cofx [_ playlist-id]]
+    (select-playlist-fx cofx playlist-id)))
 
 (reg-event-fx :spotin/open-album
   (fn [{db :db} [_ album-id]]
@@ -102,3 +105,9 @@
 (reg-event-fx :run-action
   (fn [_ [_ {:keys [id arg]}]]
     {id arg}))
+
+(reg-event-fx :spotin/open-random-playlist
+  (fn [{db :db :as cofx} _]
+    (let [playlist-id (rand-nth (:playlist-order db))]
+      (select-playlist-fx cofx playlist-id))))
+
