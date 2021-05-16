@@ -1,7 +1,7 @@
 (ns intools.spotin.components.playlists-panel
   (:require [react]
             [ink :refer [Box Text]]
-            [intools.views :refer [use-selectable-list]]
+            [intools.views :refer [use-selectable-list-controlled]]
             [intools.hooks :as hooks]))
 
 (defn playlist-item [{:keys [name]} {:keys [is-selected is-active]}]
@@ -12,18 +12,21 @@
             :wrap "truncate-end"}
    name])
 
-(defn playlists-panel [{:keys [playlists on-activate on-menu]}]
-  (let [[selected set-selected] (react/useState #{})
+(defn playlists-panel [{:keys [selected-playlist-id playlists on-activate on-menu]}]
+  (let [[selected-index on-select] (react/useState 0)
+        [selected set-selected] (react/useState #{})
         on-toggle (fn [{:keys [id]}]
                     (let [op (if (contains? selected id) disj conj)
                           value (op selected id)]
                       (set-selected value)))
 
         {:keys [selected-index is-focused]}
-        (use-selectable-list {:items playlists
-                              :on-activate #(on-activate %)
-                              :on-toggle on-toggle
-                              :auto-focus true})
+        (use-selectable-list-controlled {:selected-index selected-index
+                                         :on-select on-select
+                                         :items playlists
+                                         :on-activate #(on-activate %)
+                                         :on-toggle on-toggle
+                                         :auto-focus true})
 
         box-ref (react/useRef)
         viewport (hooks/use-ref-size box-ref)
@@ -31,6 +34,17 @@
         offset (hooks/use-scrollable-offset {:selected-index selected-index
                                              :height viewport-height})
         displayed-items (->> playlists (drop offset) (take viewport-height))]
+    (react/useEffect
+      (fn []
+        (when selected-playlist-id
+          (when-some [index (->> playlists
+                                 (keep-indexed (fn [idx {:keys [id]}]
+                                                 (when (= id selected-playlist-id)
+                                                   idx)))
+                                 (first))]
+            (on-select index)))
+        js/undefined)
+      #js [selected-playlist-id])
     (ink/useInput
       (fn [input _key]
         (when is-focused

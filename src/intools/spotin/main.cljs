@@ -152,7 +152,8 @@
       [:> Box {:width "20%"
                :flex-direction "column"}
         #_[:f> library-panel]
-        [:f> playlists-panel {:playlists (map #(get playlists %) playlist-order)
+        [:f> playlists-panel {:selected-playlist-id (-> current-route :params :playlist-id)
+                              :playlists (map #(get playlists %) playlist-order)
                               :on-menu (fn [playlist playlist-ids]
                                          (let [playlist-actions (map #(assoc % :arg playlist) playlist-actions)
                                                selected-playlists (map #(get playlists %) playlist-ids)

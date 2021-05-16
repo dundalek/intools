@@ -5,16 +5,16 @@
             [intools.hooks :as hooks]))
             ; [ink-select-input :refer [default] :rename {default SelectInput}]))
 
-(defn use-selectable-list [{:keys [focus-id items on-activate on-toggle on-cancel on-input auto-focus]}]
-  (let [[selected-index set-selected-index] (react/useState 0)
-        {:keys [is-focused]} (hooks/use-focus {:id focus-id
+(defn use-selectable-list-controlled [{:keys [focus-id items on-activate on-toggle on-cancel on-input auto-focus
+                                              selected-index on-select]}]
+  (let [{:keys [is-focused]} (hooks/use-focus {:id focus-id
                                                :auto-focus auto-focus})]
     (ink/useInput
      (fn [input ^js key]
        (when is-focused
          (cond
-           (.-upArrow key) (set-selected-index (Math/max 0 (dec selected-index)))
-           (.-downArrow key) (set-selected-index (Math/min (dec (count items)) (inc selected-index)))
+           (.-upArrow key) (on-select (Math/max 0 (dec selected-index)))
+           (.-downArrow key) (on-select (Math/min (dec (count items)) (inc selected-index)))
            (.-return key) (when on-activate
                             (on-activate (nth items selected-index)))
            (.-escape key) (when on-cancel
@@ -25,6 +25,12 @@
                    (on-input input key))))))
     {:selected-index selected-index
      :is-focused is-focused}))
+
+(defn use-selectable-list [opts]
+  (let [[selected-index on-select] (react/useState 0)]
+    (use-selectable-list-controlled (assoc opts
+                                           :selected-index selected-index
+                                           :on-select on-select))))
 
 (defn selectable-list [{:keys [items item-component] :as props}]
   (let [{:keys [selected-index]} (use-selectable-list (dissoc props :item-component))]
