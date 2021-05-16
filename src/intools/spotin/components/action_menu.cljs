@@ -6,7 +6,7 @@
   [:> Text {:bold is-selected
             :color (when is-selected "green")
             :wrap "truncate-end"}
-      (or shortcut " ") " " name])
+   (or shortcut " ") " " name])
 
 (defn action-menu [{:keys [actions on-activate on-cancel]}]
   (let [{:keys [selected-index is-focused]}
@@ -19,7 +19,7 @@
              :border-style "single"
              :border-color (when is-focused "green")
              :width 20}
-      (->> actions
+     (->> actions
           (map-indexed
            (fn [idx item]
              ^{:key idx}

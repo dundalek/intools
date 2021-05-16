@@ -9,8 +9,8 @@
  :aliases
  {:fmt
   {:extra-deps {cljfmt/cljfmt {:mvn/version "0.6.4"}}
-   :main-opts ["-m" "cljfmt.main" "check" "src"]}
+   :main-opts ["-m" "cljfmt.main" "--indents" "cljfmt-indents.edn" "check" "src"]}
 
   :fix
   {:extra-deps {cljfmt/cljfmt {:mvn/version "0.6.4"}}
-   :main-opts ["-m" "cljfmt.main" "fix" "src"]}}}
+   :main-opts ["-m" "cljfmt.main" "--indents" "cljfmt-indents.edn" "fix" "src"]}}}

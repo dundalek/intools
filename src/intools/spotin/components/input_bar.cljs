@@ -9,11 +9,11 @@
     [:> Box {:border-style "single"
              :border-color (when is-focused "green")
              :flex-direction "column"}
-      (when label
-        [:> Box
-         [:> Text label]])
-      [:> Box
-        [:f> uncontrolled-text-input {:on-submit on-submit
-                                      :on-cancel on-cancel
-                                      :focus is-focused
-                                      :default-value default-value}]]]))
+     (when label
+       [:> Box
+        [:> Text label]])
+     [:> Box
+      [:f> uncontrolled-text-input {:on-submit on-submit
+                                    :on-cancel on-cancel
+                                    :focus is-focused
+                                    :default-value default-value}]]]))

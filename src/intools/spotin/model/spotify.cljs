@@ -30,7 +30,6 @@
 
 (defonce ^:dynamic tracks nil)
 
-
 (defn authorization-url []
   (str "https://accounts.spotify.com/authorize"
        "?response_type=code"
@@ -53,7 +52,6 @@
         (.then (fn [^js body]
                  (js/console.log body)
                  body)))))
-
 
 (defn refresh-token+ [rtoken]
   (let [auth-options (clj->js
@@ -102,7 +100,7 @@
    (request-with-auto-refresh+ (cond-> {:method "PUT"
                                         :url url
                                         :json true}
-                                  (some? body) (assoc :body (clj->js body))))))
+                                 (some? body) (assoc :body (clj->js body))))))
 
 (defn authorized-post+
   ([url] (authorized-post+ url nil))
@@ -110,7 +108,7 @@
    (request-with-auto-refresh+ (cond-> {:method "POST"
                                         :url url
                                         :json true}
-                                  (some? body) (assoc :body (clj->js body))))))
+                                 (some? body) (assoc :body (clj->js body))))))
 
 (defn cache-path [k]
   (str ".cache/" k ".json"))
@@ -194,10 +192,10 @@
               (-> (get+ url)
                   (.then (fn [body]
                            (let [{:keys [items next]} (js->clj body :keywordize-keys true)]
-                              (swap! !items concat items)
-                              (if next
-                                (fetch-page+ next)
-                                {:items @!items}))))))]
+                             (swap! !items concat items)
+                             (if next
+                               (fetch-page+ next)
+                               {:items @!items}))))))]
       (fetch-page+ "https://api.spotify.com/v1/me/playlists?limit=50"))))
 
 (defn get-playlist+ [playlist-id]
@@ -236,7 +234,6 @@
   (authorized-post+ (str "https://api.spotify.com/v1/users/" user-id "/playlists")
                     (merge {:public false :collaborative false} opts)))
 
-
 (defn player-play+
   ([] (player-play+ nil))
   ([opts]
@@ -268,7 +265,7 @@
    "off" "context"})
 
 (defn player-repeat+ [state]
- (authorized-put+ (str "https://api.spotify.com/v1/me/player/repeat?state=" state)))
+  (authorized-put+ (str "https://api.spotify.com/v1/me/player/repeat?state=" state)))
 
 (defn player-toggle-repeat+ []
   (-> (get-player+)

@@ -409,9 +409,9 @@
             :on-cancel #(dispatch [:navigate-back])
             :on-activate (fn [target]
                            (run-fx!
-                             (case (:id action)
-                               "match-to" (actions/match source target)
-                               "match-from" (actions/match target source))))}]])
+                            (case (:id action)
+                              "match-to" (actions/match source target)
+                              "match-from" (actions/match target source))))}]])
 
        ::module-actions
        (let [{:keys [module-name instances]} (:params route)]

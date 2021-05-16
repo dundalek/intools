@@ -6,10 +6,10 @@
   "Like interleave, but exhausts all colls instead of stoping on the shortest one."
   [& colls]
   (lazy-seq
-    (let [ss (keep seq colls)]
-      (when (seq ss)
-        (concat (map first ss)
-                (apply interleave-all (map rest ss)))))))
+   (let [ss (keep seq colls)]
+     (when (seq ss)
+       (concat (map first ss)
+               (apply interleave-all (map rest ss)))))))
 
 (defn generate-mixed-playlist [playlists]
   (->> playlists
@@ -27,11 +27,11 @@
                                             (->> (-> body (js->clj :keywordize-keys true) :items))))
                                      (generate-mixed-playlist)
                                      (map #(get-in % [:track :uri])))]
-                  (.then (spotify/user-id+)
-                    (fn [user-id]
-                      (.then (spotify/create-playlist+ user-id {:name (str "Generated-" (+ 100 (rand-int 900)))
-                                                                :description (str "Generated from: " (str/join ", " (map :name playlists)))})
-                        (fn [^js body]
-                          (let [playlist-id (.-id body)]
-                            (spotify/authorized-post+ (str "https://api.spotify.com/v1/playlists/" playlist-id "/tracks")
-                                                    {:uris track-uris})))))))))))
+                 (.then (spotify/user-id+)
+                        (fn [user-id]
+                          (.then (spotify/create-playlist+ user-id {:name (str "Generated-" (+ 100 (rand-int 900)))
+                                                                    :description (str "Generated from: " (str/join ", " (map :name playlists)))})
+                                 (fn [^js body]
+                                   (let [playlist-id (.-id body)]
+                                     (spotify/authorized-post+ (str "https://api.spotify.com/v1/playlists/" playlist-id "/tracks")
+                                                               {:uris track-uris})))))))))))

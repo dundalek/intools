@@ -9,4 +9,3 @@
    :action-menu nil
    :input-panel nil
    :routes nil})
-

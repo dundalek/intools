@@ -35,28 +35,28 @@
                                              :height viewport-height})
         displayed-items (->> playlists (drop offset) (take viewport-height))]
     (react/useEffect
-      (fn []
-        (when selected-playlist-id
-          (when-some [index (->> playlists
-                                 (keep-indexed (fn [idx {:keys [id]}]
-                                                 (when (= id selected-playlist-id)
-                                                   idx)))
-                                 (first))]
-            (on-select index)))
-        js/undefined)
-      #js [selected-playlist-id])
+     (fn []
+       (when selected-playlist-id
+         (when-some [index (->> playlists
+                                (keep-indexed (fn [idx {:keys [id]}]
+                                                (when (= id selected-playlist-id)
+                                                  idx)))
+                                (first))]
+           (on-select index)))
+       js/undefined)
+     #js [selected-playlist-id])
     (ink/useInput
-      (fn [input _key]
-        (when is-focused
-          (case input
-            "x" (when on-menu (on-menu (nth playlists selected-index) selected))
-            nil))))
+     (fn [input _key]
+       (when is-focused
+         (case input
+           "x" (when on-menu (on-menu (nth playlists selected-index) selected))
+           nil))))
     [:> Box {:flex-direction "column"
              :border-style "single"
              :border-color (when is-focused "green")
              :flex-grow 1
              :ref box-ref}
-      (->> displayed-items
+     (->> displayed-items
           (map-indexed
            (fn [idx {:keys [id] :as item}]
              ^{:key idx}

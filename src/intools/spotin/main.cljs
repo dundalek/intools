@@ -77,12 +77,11 @@
    {:id :add-to-library
     :name "add to Library"}])
 
-
 (defn library-panel []
   (let [{:keys [is-focused]} (hooks/use-focus)]
     [:> Box {:border-style "single"
              :border-color (when is-focused "green")}
-        [:> Text "Panel 1"]]))
+     [:> Text "Panel 1"]]))
 
 (defn app []
   #_(hooks/use-fullscreen)
@@ -97,20 +96,20 @@
                                active-input-panel "input-bar")
         {:keys [focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id})]
     (ink/useInput
-      (fn [input _key]
-        (case input
-          "q" (do (.exit app)
-                  (.exit js/process))
-          "u" (dispatch [:spotin/router-back])
+     (fn [input _key]
+       (case input
+         "q" (do (.exit app)
+                 (.exit js/process))
+         "u" (dispatch [:spotin/router-back])
           ;; TODO: dispatch based on shortcut definitions instead of hard-coding
-          "/" (dispatch [:spotin/start-playlist-search])
+         "/" (dispatch [:spotin/start-playlist-search])
           ; "x" (dispatch (if actions
                           ; [:close-action-menu]
                           ; [:open-action-menu player-actions]))
-          (when-some [action (some (fn [{:keys [shortcut] :as action}]
-                                     (when (= shortcut input) action))
-                                   player-actions)]
-            (dispatch [:run-action action])))))
+         (when-some [action (some (fn [{:keys [shortcut] :as action}]
+                                    (when (= shortcut input) action))
+                                  player-actions)]
+           (dispatch [:run-action action])))))
     [:> Box {:width (:cols size)
              :height (dec (:rows size))
              :flex-direction "column"}
@@ -128,15 +127,15 @@
                          :on-cancel #(dispatch [:close-input-panel])}])
        :playlist-edit-description
        (let [{:keys [id name description]} (:arg active-input-panel)]
-        [:f> input-bar {:focus-id "input-bar"
-                        :label (str "Edit description for playlist '" name "':")
-                        :default-value description
-                        :on-submit (fn [value]
+         [:f> input-bar {:focus-id "input-bar"
+                         :label (str "Edit description for playlist '" name "':")
+                         :default-value description
+                         :on-submit (fn [value]
                                      ;; TODO invalidate current playlist via rf fx
-                                     (-> (spotify/playlist-change-description+ id value)
-                                         (.then #(dispatch [:spotin/refresh-playlists])))
-                                     (dispatch [:close-input-panel]))
-                        :on-cancel #(dispatch [:close-input-panel])}])
+                                      (-> (spotify/playlist-change-description+ id value)
+                                          (.then #(dispatch [:spotin/refresh-playlists])))
+                                      (dispatch [:close-input-panel]))
+                         :on-cancel #(dispatch [:close-input-panel])}])
 
        nil)
      [:> Box {:flex-grow 1}
@@ -161,25 +160,25 @@
           :on-cancel #(dispatch [:close-action-menu])}])
       [:> Box {:width "20%"
                :flex-direction "column"}
-        #_[:f> library-panel]
-        (when playlist-search-query
-          [:f> playlist-search-bar {:on-change #(dispatch[:spotin/set-playlist-search %])
-                                    :on-cancel (fn []
-                                                 (focus-next)
-                                                 (dispatch [:spotin/clear-playlist-search]))}])
-        [:f> playlists-panel {:selected-playlist-id (-> current-route :params :playlist-id)
-                              :playlists playlists-filtered
-                              :on-menu (fn [playlist playlist-ids]
-                                         (let [playlist-actions (map #(assoc % :arg playlist) playlist-actions)
-                                               selected-playlists (map #(get playlists %) playlist-ids)
-                                               playlists-actions (when (seq playlist-ids)
-                                                                   (map #(assoc % :arg selected-playlists) playlists-actions))
-                                               actions (concat playlist-actions
-                                                               playlists-actions
-                                                               [action-separator]
-                                                               player-actions)]
+       #_[:f> library-panel]
+       (when playlist-search-query
+         [:f> playlist-search-bar {:on-change #(dispatch [:spotin/set-playlist-search %])
+                                   :on-cancel (fn []
+                                                (focus-next)
+                                                (dispatch [:spotin/clear-playlist-search]))}])
+       [:f> playlists-panel {:selected-playlist-id (-> current-route :params :playlist-id)
+                             :playlists playlists-filtered
+                             :on-menu (fn [playlist playlist-ids]
+                                        (let [playlist-actions (map #(assoc % :arg playlist) playlist-actions)
+                                              selected-playlists (map #(get playlists %) playlist-ids)
+                                              playlists-actions (when (seq playlist-ids)
+                                                                  (map #(assoc % :arg selected-playlists) playlists-actions))
+                                              actions (concat playlist-actions
+                                                              playlists-actions
+                                                              [action-separator]
+                                                              player-actions)]
                                           (dispatch [:open-action-menu actions])))
-                              :on-activate (fn [{:keys [id]}]
+                             :on-activate (fn [{:keys [id]}]
                                             (dispatch [:set-selected-playlist id])
                                             ;; Try to focus the tracks panel after playlist selected, it is a bit brittle
                                             (focus-next))}]]

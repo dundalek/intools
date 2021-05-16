@@ -17,7 +17,7 @@
 
 (reg-event-db :spotin/router-navigate
   (fn [db [_ route]]
-     (router-navigate db route)))
+    (router-navigate db route)))
 
 (reg-event-db :spotin/router-back
   (fn [db _]
@@ -29,15 +29,15 @@
 
 (defn set-playlists [db playlists]
   (let [{:keys [selected-playlist]} db
-          first-playlist-id (-> playlists first :id)
-          new-db (assoc db
-                        :playlist-order (map :id playlists)
-                        :playlists (->> playlists
-                                        (reduce (fn [m {:keys [id] :as item}]
-                                                   (assoc m id item))
-                                                {})))]
-      (cond-> {:db new-db}
-        #_#_(and (not selected-playlist) first-playlist-id)
+        first-playlist-id (-> playlists first :id)
+        new-db (assoc db
+                      :playlist-order (map :id playlists)
+                      :playlists (->> playlists
+                                      (reduce (fn [m {:keys [id] :as item}]
+                                                (assoc m id item))
+                                              {})))]
+    (cond-> {:db new-db}
+      #_#_(and (not selected-playlist) first-playlist-id)
         (assoc :dispatch [:set-selected-playlist first-playlist-id]))))
 
 (reg-event-fx :set-playlists
@@ -55,7 +55,7 @@
 
 (defn select-playlist-fx [{db :db} playlist-id]
   {:db (router-navigate db {:name :playlist
-                              :params {:playlist-id playlist-id}})
+                            :params {:playlist-id playlist-id}})
    :spotin/load-playlist-tracks playlist-id})
 
 (reg-event-fx :set-selected-playlist

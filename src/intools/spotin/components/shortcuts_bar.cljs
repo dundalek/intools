@@ -4,12 +4,12 @@
 
 (defn shortcuts-bar [{:keys [actions]}]
   [:> Box
-    [:> Text
-     "x: menu, "
-     (->> actions
-          (filter :shortcut)
-          (map (fn [{:keys [shortcut name]}]
-                 (str shortcut ": " name)))
-          (str/join ", "))
-     ", u: back"
-     ", q: quit"]])
+   [:> Text
+    "x: menu, "
+    (->> actions
+         (filter :shortcut)
+         (map (fn [{:keys [shortcut name]}]
+                (str shortcut ": " name)))
+         (str/join ", "))
+    ", u: back"
+    ", q: quit"]])

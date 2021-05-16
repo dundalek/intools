@@ -44,20 +44,20 @@
                (fn [_ignore])))))
 
 (reg-fx :spotin/refresh-playlists
-    (fn [_]
-      (-> (spotify/cache-edn+ "get-all-playlists+" spotify/get-all-playlists+)
-          (.then (fn [{:keys [items]}]
-                   (dispatch [:set-playlists items]))))))
+  (fn [_]
+    (-> (spotify/cache-edn+ "get-all-playlists+" spotify/get-all-playlists+)
+        (.then (fn [{:keys [items]}]
+                 (dispatch [:set-playlists items]))))))
 
 (reg-fx :spotin/load-playlist-tracks
   (fn [playlist-id]
     (-> (spotify/get-playlist-tracks+ playlist-id)
         (.then (fn [body]
-                  (dispatch [:set-playlist-tracks playlist-id (-> body (js->clj :keywordize-keys true) :items)]))))))
+                 (dispatch [:set-playlist-tracks playlist-id (-> body (js->clj :keywordize-keys true) :items)]))))))
 
 (reg-fx :spotin/load-album
   (fn [album-id]
     (-> (spotify/get-album+ album-id)
         (.then (fn [body]
-                  (dispatch [:spotin/set-album album-id
-                             (js->clj body :keywordize-keys true)]))))))
+                 (dispatch [:spotin/set-album album-id
+                            (js->clj body :keywordize-keys true)]))))))
