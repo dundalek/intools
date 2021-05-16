@@ -34,6 +34,12 @@
         offset (hooks/use-scrollable-offset {:selected-index selected-index
                                              :height viewport-height})
         displayed-items (->> playlists (drop offset) (take viewport-height))]
+
+    (react/useEffect
+     (fn []
+       (on-select 0))
+     #js [(count playlists)])
+
     (react/useEffect
      (fn []
        (when selected-playlist-id
@@ -45,12 +51,14 @@
            (on-select index)))
        js/undefined)
      #js [selected-playlist-id])
+
     (ink/useInput
      (fn [input _key]
        (when is-focused
          (case input
            "x" (when on-menu (on-menu (nth playlists selected-index) selected))
            nil))))
+
     [:> Box {:flex-direction "column"
              :border-style "single"
              :border-color (when is-focused "green")
@@ -62,4 +70,3 @@
              ^{:key idx}
              [playlist-item item {:is-selected (= idx (- selected-index offset))
                                   :is-active (contains? selected id)}])))]))
-
