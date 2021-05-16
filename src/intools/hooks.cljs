@@ -95,18 +95,24 @@
 
 (defn use-focus-manager [{:keys [focus-id]}]
   (let [context (react/useContext FocusContext)
-        active-id (.-activeId context)]
+        active-id (.-activeId context)
+        [requested-id set-requested-id] (react/useState nil)]
+    (react/useEffect
+      (fn []
+        (set-requested-id focus-id)
+        js/undefined)
+      #js [focus-id])
     (react/useEffect
       (fn []
         ;; This could get into infinite loop if the focusable does not exist
         ;; Perhaps it would be good to implement cycle detection
-        (when (and focus-id (not= active-id focus-id))
-          (.focusNext context))
+        (when requested-id
+          (if (= active-id requested-id)
+            (set-requested-id nil)
+            (.focusNext context)))
         js/undefined)
-      #js [focus-id active-id])
+      #js [requested-id active-id])
     {:enable-focus (.-enableFocus context)
      :disable-focus (.-disableFocus context)
      :focus-next(.-focusNext context)
      :focus-previous (.-focusPrevious context)}))
-
-

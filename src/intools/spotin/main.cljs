@@ -11,6 +11,7 @@
             [intools.spotin.components.shortcuts-bar :refer [shortcuts-bar]]
             [intools.spotin.components.status-bar :refer [status-bar]]
             [intools.spotin.components.tracks-panel :refer [tracks-panel]]
+            [intools.spotin.components.playlist-search-bar :refer [playlist-search-bar]]
             [re-frame.core :as rf :refer [dispatch subscribe]]
             [intools.spotin.app.events]
             [intools.spotin.app.fx]
@@ -57,7 +58,10 @@
    {:id :spotin/open-random-playlist
     :name "open random"}
    {:id :spotin/refresh-playlists
-    :name "refresh"}])
+    :name "refresh"}
+   {:id :spotin/start-playlist-search
+    :name "search"
+    :shortcut "/"}])
 
 (def playlists-actions
   [{:id :playlists-mix
@@ -84,18 +88,22 @@
   #_(hooks/use-fullscreen)
   (let [app (ink/useApp)
         size (hooks/use-window-size)
-        {:keys [playlist-order playlists playlist-tracks actions active-input-panel]} @(subscribe [:db])
+        {:keys [playlist-order playlists playlist-tracks actions active-input-panel playlist-search-query]} @(subscribe [:db])
+        playlists-filtered @(subscribe [:spotin/playlists-filtered])
         current-route @(subscribe [:spotin/current-route])
         focused-component-id (cond
+                               playlist-search-query "playlist-search-bar"
                                actions "action-menu"
                                active-input-panel "input-bar")
-        {:keys [focus-next]} (hooks/use-focus-manager {:focus-id focused-component-id})]
+        {:keys [focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id})]
     (ink/useInput
       (fn [input _key]
         (case input
           "q" (do (.exit app)
                   (.exit js/process))
           "u" (dispatch [:spotin/router-back])
+          ;; TODO: dispatch based on shortcut definitions instead of hard-coding
+          "/" (dispatch [:spotin/start-playlist-search])
           ; "x" (dispatch (if actions
                           ; [:close-action-menu]
                           ; [:open-action-menu player-actions]))
@@ -147,13 +155,20 @@
                            :open-album (dispatch [:spotin/open-album (-> arg :track :album :id)])
                            :spotin/open-random-playlist (do (dispatch [:spotin/open-random-playlist])
                                                             (dispatch [:close-action-menu]))
+                           :spotin/start-playlist-search (do (dispatch [:spotin/start-playlist-search])
+                                                             (dispatch [:close-action-menu]))
                            (dispatch [:run-action action])))
           :on-cancel #(dispatch [:close-action-menu])}])
       [:> Box {:width "20%"
                :flex-direction "column"}
         #_[:f> library-panel]
+        (when playlist-search-query
+          [:f> playlist-search-bar {:on-change #(dispatch[:spotin/set-playlist-search %])
+                                    :on-cancel (fn []
+                                                 (focus-next)
+                                                 (dispatch [:spotin/clear-playlist-search]))}])
         [:f> playlists-panel {:selected-playlist-id (-> current-route :params :playlist-id)
-                              :playlists (map #(get playlists %) playlist-order)
+                              :playlists playlists-filtered
                               :on-menu (fn [playlist playlist-ids]
                                          (let [playlist-actions (map #(assoc % :arg playlist) playlist-actions)
                                                selected-playlists (map #(get playlists %) playlist-ids)

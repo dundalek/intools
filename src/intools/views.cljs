@@ -52,14 +52,17 @@
        (into [:> Box {:border-style "round"}])))
 
 ;; ink's UncontrolledTextInput doesn't support default value
-;; also adding the on-cancel callback, limitation: only one widget should be rendered at a time
-(defn uncontrolled-text-input [{:keys [default-value on-cancel] :as props}]
+;; also adding the on-cancel callback
+(defn uncontrolled-text-input [{:keys [focus default-value on-change on-cancel] :as props}]
   (ink/useInput
    (fn [_input ^js key]
-     (when (and on-cancel (.-escape key))
+     (when (and on-cancel (not (false? focus)) (.-escape key))
        (on-cancel))))
-  (let [[value set-value] (react/useState (or default-value ""))]
+  (let [[value set-value] (react/useState (or default-value ""))
+        on-change (fn [s]
+                    (set-value s)
+                    (when on-change (on-change s)))]
     [:> TextInput (-> props
                       (dissoc :default-value :on-cancel)
                       (assoc :value value
-                             :on-change set-value))]))
+                             :on-change on-change))]))

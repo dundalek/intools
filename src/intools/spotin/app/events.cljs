@@ -111,3 +111,17 @@
     (let [playlist-id (rand-nth (:playlist-order db))]
       (select-playlist-fx cofx playlist-id))))
 
+(defn set-playlist-search [db query]
+  (assoc db :playlist-search-query query))
+
+(reg-event-db :spotin/set-playlist-search
+  (fn [db [_ query]]
+    (set-playlist-search db query)))
+
+(reg-event-db :spotin/start-playlist-search
+  (fn [db _]
+    (set-playlist-search db "")))
+
+(reg-event-db :spotin/clear-playlist-search
+  (fn [db _]
+    (set-playlist-search db nil)))
