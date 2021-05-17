@@ -19,6 +19,21 @@
   (fn [db [_ album-id]]
     (-> db :albums (get album-id))))
 
+(reg-sub :spotin/playback-status
+  (fn [db]
+    (:playback-status db)))
+
+(reg-sub :spotin/playback-item-uri
+  :<- [:spotin/playback-status]
+  (fn [status]
+    (-> status :item :uri)))
+
+(reg-sub :spotin/playback-context-uri
+  :<- [:spotin/playback-status]
+  (fn [status]
+    (when (:is_playing status)
+      (-> status :context :uri))))
+
 (reg-sub :spotin/playlists
   (fn [db]
     (:playlists db)))

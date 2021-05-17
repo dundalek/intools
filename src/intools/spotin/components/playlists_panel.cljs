@@ -1,18 +1,23 @@
 (ns intools.spotin.components.playlists-panel
-  (:require [ink :refer [Box Text]]
+  (:require [ink :refer [Box Spacer Text]]
             [intools.hooks :as hooks]
             [intools.views :refer [scroll-status uncontrolled-text-input use-selectable-list-controlled]]
             [react]))
 
-(defn playlist-item [{:keys [name]} {:keys [is-selected is-active]}]
-  [:> Text {:bold is-selected
-            :color (cond
-                     is-active "yellow"
-                     is-selected "green")
-            :wrap "truncate-end"}
-   name])
+(defn playlist-item [{:keys [name]} {:keys [is-selected is-active is-highlighted]}]
+  (let [props {:bold is-selected
+               :color (cond
+                        is-active "yellow"
+                        (or is-selected is-highlighted) "green")}]
+    [:> Box
+     [:> Text (assoc props :wrap "truncate-end")
+      name]
+     [Spacer]
+     (when is-highlighted
+        ;; perhaps use some speaker pictogram from unicode
+       [:> Text props " >"])]))
 
-(defn playlists-panel [{:keys [focus-id selected-playlist-id playlists is-searching
+(defn playlists-panel [{:keys [focus-id selected-playlist-id playlists is-searching playback-context-uri
                                on-activate on-menu on-search-change on-search-cancel]}]
   (let [[selected-index on-select] (react/useState 0)
         [selected set-selected] (react/useState #{})
@@ -73,8 +78,10 @@
               :ref box-ref}
       (->> displayed-items
            (map-indexed
-            (fn [idx {:keys [id] :as item}]
+            (fn [idx {:keys [id uri] :as item}]
               ^{:key idx}
               [playlist-item item {:is-selected (= idx (- selected-index offset))
-                                   :is-active (contains? selected id)}])))]
+                                   :is-active (contains? selected id)
+                                   :is-highlighted (and playback-context-uri
+                                                        (= playback-context-uri uri))}])))]
      [scroll-status selected-index playlists]]))

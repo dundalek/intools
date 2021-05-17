@@ -23,6 +23,10 @@
   (fn [db _]
     (router-back db)))
 
+(reg-event-db :spotin/set-playback-status
+  (fn [db [_ status]]
+    (assoc db :playback-status status)))
+
 (reg-event-fx :spotin/refresh-playlists
   (fn [_ _]
     {:spotin/refresh-playlists nil}))

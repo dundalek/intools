@@ -123,6 +123,22 @@
                                                  (dispatch [:spotin/close-confirmation-modal])
                                                  (when on-cancel (on-cancel))))]))
 
+(defn use-playback-status [set-playback]
+  (react/useEffect
+   (fn []
+     (let [on-interval (fn []
+                         (-> (spotify/get-player+)
+                             (.then (fn [body]
+                                      (let [status (js->clj body :keywordize-keys true)]
+                                        (set-playback status))))))
+           interval-id (js/setInterval on-interval 5000)]
+       (on-interval)
+       #(js/clearInterval interval-id)))
+   #js []))
+
+(defn playback-status-bar []
+  [status-bar @(subscribe [:spotin/playback-status])])
+
 (defn app []
   #_(hooks/use-fullscreen)
   (let [app (ink/useApp)
@@ -133,6 +149,8 @@
         actions-search-query @(subscribe [:spotin/actions-search-query])
         current-route @(subscribe [:spotin/current-route])
         tracks-filtered @(subscribe [:spotin/tracks-filtered])
+        playback-item-uri @(subscribe [:spotin/playback-item-uri])
+        playback-context-uri @(subscribe [:spotin/playback-context-uri])
         confirmation-modal-open? (some? @(subscribe [:spotin/confirmation-modal]))
         focused-component-id (cond
                                confirmation-modal-open? "confirmation-modal"
@@ -141,6 +159,7 @@
         force-focus (contains? #{"action-menu" "input-bar" "confirmation-modal"} focused-component-id)
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id
                                                                                       :force force-focus})]
+    ; (use-playback-status #(dispatch [:spotin/set-playback-status %]))
     (ink/useInput
      (fn [input _key]
        (when-not (or (and (= active-focus-id "action-menu") actions-search-query)
@@ -227,6 +246,7 @@
                              :selected-playlist-id (-> current-route :params :playlist-id)
                              :playlists playlists-filtered
                              :is-searching (some? playlist-search-query)
+                             :playback-context-uri playback-context-uri
                              :on-search-change #(dispatch [:spotin/set-playlist-search %])
                              :on-search-cancel #(dispatch [:spotin/clear-playlist-search])
                              :on-menu (fn [playlist playlist-ids]
@@ -251,6 +271,7 @@
                              :playlist (get playlists playlist-id)
                              :tracks tracks-filtered
                              :is-searching (some? track-search-query)
+                             :playback-item-uri playback-item-uri
                              :on-search-change #(dispatch [:spotin/set-track-search %])
                              :on-search-cancel #(dispatch [:spotin/set-track-search nil])
                              :on-menu (fn [item]
@@ -267,7 +288,7 @@
         (let [{:keys [album-id]} (:params current-route)]
           [:f> album-panel {:album @(subscribe [:spotin/album-by-id album-id])}])
         nil)]
-     #_[:f> status-bar]
+     [playback-status-bar]
      [shortcuts-bar {:actions player-actions}]]))
 
 (defn render []
@@ -279,6 +300,5 @@
 
 (defn ^:dev/after-load reload! []
   (rf/clear-subscription-cache!)
-  (.rerender ^js/InkInstance @!app (r/as-element [:f> app]))
-  #_(render))
+  (.rerender ^js/InkInstance @!app (r/as-element [:f> app])))
 

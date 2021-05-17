@@ -2,24 +2,12 @@
   (:require [clojure.string :as str]
             [ink :refer [Box Text]]
             [intools.spotin.format :refer [format-duration]]
-            [intools.spotin.model.spotify :as spotify]
             [react]))
 
-(defn status-bar []
-  (let [[playback set-playback] (react/useState nil)
-        {:keys [is_playing progress_ms shuffle_state repeat_state device item]} playback
+(defn status-bar [playback]
+  (let [{:keys [is_playing progress_ms shuffle_state repeat_state device item]} playback
         {:keys [duration_ms album artists] item-name :name} item]
-    (react/useEffect
-     (fn []
-       (let [on-interval (fn []
-                           (-> (spotify/get-player+)
-                               (.then (fn [body]
-                                        (let [status (js->clj body :keywordize-keys true)]
-                                          (set-playback status))))))
-             interval-id (js/setInterval on-interval 5000)]
-         (on-interval)
-         #(js/clearInterval interval-id)))
-     #js [])
+
     [:> Box {:border-style "single"
              :flex-direction "column"
              :padding-x 1}
