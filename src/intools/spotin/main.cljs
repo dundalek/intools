@@ -101,7 +101,6 @@
         actions-search-query @(subscribe [:spotin/actions-search-query])
         current-route @(subscribe [:spotin/current-route])
         focused-component-id (cond
-                               playlist-search-query "playlist-search-bar"
                                actions "action-menu"
                                active-input-panel "input-bar")
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id})]
@@ -180,16 +179,12 @@
       [:> Box {:width "20%"
                :flex-direction "column"}
        #_[:f> library-panel]
-       (when playlist-search-query
-         [:f> input-bar {:focus-id "playlist-search-bar"
-                         :label "Search playlists:"
-                         :on-change #(dispatch [:spotin/set-playlist-search %])
-                         :on-cancel (fn []
-                                      (focus-next)
-                                      (dispatch [:spotin/clear-playlist-search]))}])
        [:f> playlists-panel {:focus-id "playlists-panel"
                              :selected-playlist-id (-> current-route :params :playlist-id)
                              :playlists playlists-filtered
+                             :is-searching (some? playlist-search-query)
+                             :on-search-change #(dispatch [:spotin/set-playlist-search %])
+                             :on-search-cancel #(dispatch [:spotin/clear-playlist-search])
                              :on-menu (fn [playlist playlist-ids]
                                         (let [playlist-actions (map #(assoc % :arg playlist) playlist-actions)
                                               selected-playlists (map #(get playlists %) playlist-ids)
@@ -202,7 +197,7 @@
                                           (dispatch [:open-action-menu actions])))
                              :on-activate (fn [{:keys [id]}]
                                             (dispatch [:set-selected-playlist id])
-                                           ;; Try to focus the tracks panel after playlist selected, it is a bit brittle
+                                            ;; Try to focus the tracks panel after playlist selected, it is a bit brittle
                                             (focus-next))}]]
       (case (:name current-route)
         :playlist

@@ -1,7 +1,7 @@
 (ns intools.spotin.components.playlists-panel
   (:require [ink :refer [Box Text]]
             [intools.hooks :as hooks]
-            [intools.views :refer [use-selectable-list-controlled]]
+            [intools.views :refer [uncontrolled-text-input use-selectable-list-controlled]]
             [react]))
 
 (defn playlist-item [{:keys [name]} {:keys [is-selected is-active]}]
@@ -12,7 +12,8 @@
             :wrap "truncate-end"}
    name])
 
-(defn playlists-panel [{:keys [focus-id selected-playlist-id playlists on-activate on-menu]}]
+(defn playlists-panel [{:keys [focus-id selected-playlist-id playlists is-searching
+                               on-activate on-menu on-search-change on-search-cancel]}]
   (let [[selected-index on-select] (react/useState 0)
         [selected set-selected] (react/useState #{})
         on-toggle (fn [{:keys [id]}]
@@ -31,7 +32,7 @@
 
         box-ref (react/useRef)
         viewport (hooks/use-ref-size box-ref)
-        viewport-height (- (or (:height viewport) (count playlists)) 2) ; -2 to compensate for borders
+        viewport-height (or (:height viewport) (count playlists))
         offset (hooks/use-scrollable-offset {:selected-index selected-index
                                              :height viewport-height})
         displayed-items (->> playlists (drop offset) (take viewport-height))]
@@ -64,11 +65,21 @@
     [:> Box {:flex-direction "column"
              :border-style "single"
              :border-color (when is-focused "green")
-             :flex-grow 1
-             :ref box-ref}
-     (->> displayed-items
-          (map-indexed
-           (fn [idx {:keys [id] :as item}]
-             ^{:key idx}
-             [playlist-item item {:is-selected (= idx (- selected-index offset))
-                                  :is-active (contains? selected id)}])))]))
+             :flex-grow 1}
+     (when is-searching
+       [:> Box {:flex-direction "column"
+                :height 3}
+        [:> Text {:wrap "truncate-end"}
+         "Search playlists:"]
+        [:f> uncontrolled-text-input {:focus is-focused
+                                      :on-change on-search-change
+                                      :on-cancel on-search-cancel}]])
+     [:> Box {:flex-direction "column"
+              :flex-grow 1
+              :ref box-ref}
+      (->> displayed-items
+           (map-indexed
+            (fn [idx {:keys [id] :as item}]
+              ^{:key idx}
+              [playlist-item item {:is-selected (= idx (- selected-index offset))
+                                   :is-active (contains? selected id)}])))]]))
