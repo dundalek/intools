@@ -1,6 +1,6 @@
 (ns intools.dkmsin.model
-  (:require [intools.shell :refer [sh]]
-            [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [intools.shell :refer [sh]]))
 
 (defrecord Module [module module-version kernel-version arch status])
 

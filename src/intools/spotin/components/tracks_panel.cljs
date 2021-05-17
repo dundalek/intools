@@ -1,10 +1,10 @@
 (ns intools.spotin.components.tracks-panel
-  (:require [react]
-            [intools.hooks :as hooks]
-            [intools.views :refer [use-selectable-list]]
+  (:require [clojure.string :as str]
             [ink :refer [Box Spacer Text]]
-            [clojure.string :as str]
-            [intools.spotin.format :refer [format-duration]]))
+            [intools.hooks :as hooks]
+            [intools.spotin.format :refer [format-duration]]
+            [intools.views :refer [use-selectable-list]]
+            [react]))
 
 (defn track-item [{:keys [track]} {:keys [is-selected]}]
   (let [{:keys [name duration_ms album artists]} track]

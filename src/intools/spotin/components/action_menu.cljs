@@ -1,7 +1,7 @@
 (ns intools.spotin.components.action-menu
   (:require [ink :refer [Box Text]]
-            [intools.views :refer [use-selectable-list-controlled]]
             [intools.spotin.components.input-bar :refer [input-bar]]
+            [intools.views :refer [use-selectable-list-controlled]]
             [react]))
 
 (defn action-item [{:keys [shortcut name]} {:keys [is-selected]}]

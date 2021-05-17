@@ -1,6 +1,6 @@
 (ns intools.spotin.model.playlist
-  (:require [intools.spotin.model.spotify :as spotify]
-            [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [intools.spotin.model.spotify :as spotify]))
 
 (defn interleave-all
   "Like interleave, but exhausts all colls instead of stoping on the shortest one."

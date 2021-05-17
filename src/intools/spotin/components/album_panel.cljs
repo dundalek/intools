@@ -1,6 +1,6 @@
 (ns intools.spotin.components.album-panel
-  (:require [ink :refer [Box Spacer Text]]
-            [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [ink :refer [Box Spacer Text]]))
 
 (defn album-header [{:keys [name artists release_date total_tracks]}]
   [:> Box {:flex-direction "column"

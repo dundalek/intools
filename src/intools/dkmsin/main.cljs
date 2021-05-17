@@ -1,13 +1,13 @@
 (ns intools.dkmsin.main
   (:require [clojure.string :as str]
-            [reagent.core :as r]
-            [react]
             [ink :refer [Box Text]]
-            [intools.views :refer [selectable-list action-bar uncontrolled-text-input]]
-            [intools.shell :refer [sh]]
-            ; [intools.hooks :refer [use-fullscreen]]
             [intools.dkmsin.actions :as actions]
-            [intools.dkmsin.model :as model]))
+            [intools.dkmsin.model :as model]
+            [intools.shell :refer [sh]]
+            [intools.views :refer [action-bar selectable-list uncontrolled-text-input]]
+            ; [intools.hooks :refer [use-fullscreen]]
+            [react]
+            [reagent.core :as r]))
             ; [ink-select-input :refer [default] :rename {default SelectInput}]))
 
 (defonce !app (atom nil))

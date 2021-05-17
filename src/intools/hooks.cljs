@@ -1,7 +1,7 @@
 (ns intools.hooks
-  (:require [react]
+  (:require ["ink/build/components/FocusContext" :refer [default] :rename {default FocusContext}]
             [ink]
-            ["ink/build/components/FocusContext" :refer [default] :rename {default FocusContext}]))
+            [react]))
 
 (def enterAltScreenCommand "\u001b[?1049h")
 (def leaveAltScreenCommand "\u001b[?1049l")

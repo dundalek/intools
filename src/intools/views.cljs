@@ -1,8 +1,8 @@
 (ns intools.views
-  (:require [react]
-            [ink :refer [Box Text]]
+  (:require [ink :refer [Box Text]]
             [ink-text-input :refer [default] :rename {default TextInput}]
-            [intools.hooks :as hooks]))
+            [intools.hooks :as hooks]
+            [react]))
             ; [ink-select-input :refer [default] :rename {default SelectInput}]))
 
 (defn use-selectable-list-controlled [{:keys [focus-id items on-activate on-toggle on-cancel on-input auto-focus

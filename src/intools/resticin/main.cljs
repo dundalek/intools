@@ -1,10 +1,10 @@
 (ns intools.resticin.main
   (:require [clojure.string :as str]
-            [reagent.core :as r]
-            [react]
             [ink :refer [Box Text]]
+            [intools.resticin.model :as model]
             [intools.views :refer [action-bar selectable-list]]
-            [intools.resticin.model :as model])
+            [react]
+            [reagent.core :as r])
   (:import (goog.i18n DateTimeFormat)))
 
 (defonce !app (atom nil))

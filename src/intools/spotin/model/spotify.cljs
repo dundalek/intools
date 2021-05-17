@@ -1,6 +1,6 @@
 (ns intools.spotin.model.spotify
-  (:require [clojure.string :as str]
-            [clojure.edn :as edn]))
+  (:require [clojure.edn :as edn]
+            [clojure.string :as str]))
 
 (def fsp (js/require "fs/promises"))
 (def rp (js/require "request-promise-native"))

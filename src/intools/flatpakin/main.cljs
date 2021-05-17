@@ -1,9 +1,9 @@
 (ns intools.flatpakin.main
-  (:require [reagent.core :as r]
-            [react]
-            [ink :refer [Box Text]]
+  (:require [ink :refer [Box Text]]
+            [intools.flatpakin.model :as model]
             [intools.views :refer [selectable-list]]
-            [intools.flatpakin.model :as model]))
+            [react]
+            [reagent.core :as r]))
 
 (defonce !app (atom nil))
 (declare render)

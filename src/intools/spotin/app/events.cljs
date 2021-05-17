@@ -1,6 +1,6 @@
 (ns intools.spotin.app.events
-  (:require [re-frame.core :refer [reg-event-db reg-event-fx]]
-            [intools.spotin.app.db :as db]))
+  (:require [intools.spotin.app.db :as db]
+            [re-frame.core :refer [reg-event-db reg-event-fx]]))
 
 (defn router-navigate [db route]
   (update db :routes conj route))

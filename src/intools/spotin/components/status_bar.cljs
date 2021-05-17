@@ -1,9 +1,9 @@
 (ns intools.spotin.components.status-bar
-  (:require [react]
+  (:require [clojure.string :as str]
             [ink :refer [Box Text]]
+            [intools.spotin.format :refer [format-duration]]
             [intools.spotin.model.spotify :as spotify]
-            [clojure.string :as str]
-            [intools.spotin.format :refer [format-duration]]))
+            [react]))
 
 (defn status-bar []
   (let [[playback set-playback] (react/useState nil)

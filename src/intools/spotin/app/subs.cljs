@@ -1,6 +1,6 @@
 (ns intools.spotin.app.subs
-  (:require [re-frame.core :refer [reg-sub]]
-            [intools.search :as search]))
+  (:require [intools.search :as search]
+            [re-frame.core :refer [reg-sub]]))
 
 (reg-sub :db
   (fn [db _]

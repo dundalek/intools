@@ -1,6 +1,6 @@
 (ns intools.flatpakin.model
-  (:require [intools.shell :refer [sh]]
-            [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [intools.shell :refer [sh]]))
 
 (def installation-columns ["name" "description" "application" "version" "branch" "arch" "runtime" "origin" "installation" "ref" "active" "latest" "size" "options"])
 

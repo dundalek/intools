@@ -1,7 +1,7 @@
 (ns intools.spotin.app.fx
-  (:require [re-frame.core :refer [dispatch reg-fx]]
+  (:require [intools.spotin.model.playlist :as playlist]
             [intools.spotin.model.spotify :as spotify]
-            [intools.spotin.model.playlist :as playlist]))
+            [re-frame.core :refer [dispatch reg-fx]]))
 
 (reg-fx :play-pause
   (fn [_] (spotify/player-play-pause+)))

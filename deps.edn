@@ -13,4 +13,12 @@
 
   :fix
   {:extra-deps {cljfmt/cljfmt {:mvn/version "0.6.4"}}
-   :main-opts ["-m" "cljfmt.main" "--indents" "cljfmt-indents.edn" "fix" "src"]}}}
+   :main-opts ["-m" "cljfmt.main" "--indents" "cljfmt-indents.edn" "fix" "src"]}
+
+  :nsorg
+  {:extra-deps {nsorg-cli/nsorg-cli {:mvn/version "0.3.1"}}
+   :main-opts  ["-m" "nsorg.cli" "src"]}
+
+  :nsorg/fix
+  {:extra-deps {nsorg-cli/nsorg-cli {:mvn/version "0.3.1"}}
+   :main-opts  ["-m" "nsorg.cli" "--replace" "src"]}}}

@@ -1,9 +1,9 @@
 (ns intools.spotin.main
-  (:require [reagent.core :as r]
-            [react]
-            [ink :refer [Box Text]]
-            [intools.spotin.model.spotify :as spotify]
+  (:require [ink :refer [Box Text]]
             [intools.hooks :as hooks]
+            [intools.spotin.app.events]
+            [intools.spotin.app.fx]
+            [intools.spotin.app.subs]
             [intools.spotin.components.action-menu :refer [action-menu]]
             [intools.spotin.components.album-panel :refer [album-panel]]
             [intools.spotin.components.input-bar :refer [input-bar]]
@@ -11,10 +11,10 @@
             [intools.spotin.components.shortcuts-bar :refer [shortcuts-bar]]
             [intools.spotin.components.status-bar :refer [status-bar]]
             [intools.spotin.components.tracks-panel :refer [tracks-panel]]
+            [intools.spotin.model.spotify :as spotify]
             [re-frame.core :as rf :refer [dispatch subscribe]]
-            [intools.spotin.app.events]
-            [intools.spotin.app.fx]
-            [intools.spotin.app.subs]))
+            [react]
+            [reagent.core :as r]))
 
 (defonce !app (atom nil))
 (declare render)

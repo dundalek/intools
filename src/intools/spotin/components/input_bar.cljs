@@ -1,7 +1,7 @@
 (ns intools.spotin.components.input-bar
-  (:require [intools.views :refer [uncontrolled-text-input]]
+  (:require [ink :refer [Box Text]]
             [intools.hooks :as hooks]
-            [ink :refer [Box Text]]))
+            [intools.views :refer [uncontrolled-text-input]]))
 
 (defn input-bar [{:keys [focus-id label default-value on-change on-submit on-cancel]}]
   (let [{:keys [is-focused]} (hooks/use-focus {:id focus-id

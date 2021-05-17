@@ -1,6 +1,6 @@
 (ns intools.resticin.model
-  (:require [intools.shell :refer [sh]]
-            [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [intools.shell :refer [sh]]))
 
 (defn list-snapshots []
   (->> (-> (sh "restic" "snapshots" "--json")
