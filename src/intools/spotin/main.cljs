@@ -61,7 +61,7 @@
    action-separator
    {:id :spotin/open-random-playlist
     :name "open random"
-    :shortcut "g"
+    :shortcut "o"
     :event [:spotin/open-random-playlist]}
    {:id :spotin/refresh-playlists
     :name "refresh"
@@ -108,7 +108,9 @@
         focused-component-id (cond
                                actions "action-menu"
                                active-input-panel "input-bar")
-        {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id})]
+        force-focus (contains? #{"action-menu" "input-bar"} focused-component-id)
+        {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id
+                                                                                      :force force-focus})]
     (ink/useInput
      (fn [input _key]
        (when-not (or (and (= active-focus-id "action-menu") actions-search-query)

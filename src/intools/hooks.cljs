@@ -93,7 +93,7 @@
 
      {:is-focused (and (boolean id) (= (.-activeId context) id))})))
 
-(defn use-focus-manager [{:keys [focus-id]}]
+(defn use-focus-manager [{:keys [focus-id force]}]
   (let [context (react/useContext FocusContext)
         active-id (.-activeId context)
         [requested-id set-requested-id] (react/useState nil)]
@@ -101,17 +101,20 @@
      (fn []
        (set-requested-id focus-id)
        js/undefined)
-     #js [focus-id])
+     #js [focus-id force])
     (react/useEffect
      (fn []
-        ;; This could get into infinite loop if the focusable does not exist
-        ;; Perhaps it would be good to implement cycle detection
-       (when requested-id
-         (if (= active-id requested-id)
-           (set-requested-id nil)
-           (.focusNext context)))
+       (cond
+         ;; This could get into infinite loop if the focusable does not exist
+         ;; Perhaps it would be good to implement cycle detection
+         requested-id (if (= active-id requested-id)
+                        (when-not force
+                          (set-requested-id nil))
+                        (.focusNext context))
+         ;; Workaround to always have some component focused, e.g. after closing a menu
+         (not active-id) (.focusNext context))
        js/undefined)
-     #js [requested-id active-id])
+     #js [requested-id active-id force])
     {:active-focus-id active-id
      :enable-focus (.-enableFocus context)
      :disable-focus (.-disableFocus context)
