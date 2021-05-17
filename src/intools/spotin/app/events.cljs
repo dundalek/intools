@@ -135,3 +135,11 @@
 (reg-event-db :spotin/set-track-search
   (fn [db [_ query]]
     (assoc db :track-search-query query)))
+
+(reg-event-db :spotin/open-confirmation-modal
+  (fn [db [_ opts]]
+    (assoc db :confirmation-modal opts)))
+
+(reg-event-db :spotin/close-confirmation-modal
+  (fn [db]
+    (assoc db :confirmation-modal nil)))

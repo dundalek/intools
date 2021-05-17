@@ -95,6 +95,34 @@
              :border-color (when is-focused "green")}
      [:> Text "Panel 1"]]))
 
+(defn confirmation-modal* [{:keys [title description focus-id on-submit on-cancel]}]
+  (let [{:keys [is-focused]} (hooks/use-focus {:id focus-id
+                                               :auto-focus true})]
+    (ink/useInput
+     (fn [input ^js key]
+       (when is-focused
+         (cond
+           (or (.-return key) (= input "y")) (when on-submit (on-submit))
+           (.-escape key) (when on-cancel (on-cancel))))))
+    [:> Box {:border-style "single"
+             :border-color (when is-focused "green")
+             :flex-direction "column"
+             :padding-x 1}
+     ;; Ideally title would be over top border
+     (when title [:> Box [:> Text {:color "green"} title]])
+     (when description [:> Box [:> Text description]])]))
+
+(defn confirmation-modal []
+  (when-some [{:keys [on-submit on-cancel] :as opts} @(subscribe [:spotin/confirmation-modal])]
+    [:f> confirmation-modal* (assoc opts
+                                    :focus-id "confirmation-modal"
+                                    :on-submit (fn []
+                                                 (dispatch [:spotin/close-confirmation-modal])
+                                                 (when on-submit (on-submit)))
+                                    :on-cancel (fn []
+                                                 (dispatch [:spotin/close-confirmation-modal])
+                                                 (when on-cancel (on-cancel))))]))
+
 (defn app []
   #_(hooks/use-fullscreen)
   (let [app (ink/useApp)
@@ -105,10 +133,12 @@
         actions-search-query @(subscribe [:spotin/actions-search-query])
         current-route @(subscribe [:spotin/current-route])
         tracks-filtered @(subscribe [:spotin/tracks-filtered])
+        confirmation-modal-open? (some? @(subscribe [:spotin/confirmation-modal]))
         focused-component-id (cond
+                               confirmation-modal-open? "confirmation-modal"
                                actions "action-menu"
                                active-input-panel "input-bar")
-        force-focus (contains? #{"action-menu" "input-bar"} focused-component-id)
+        force-focus (contains? #{"action-menu" "input-bar" "confirmation-modal"} focused-component-id)
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id
                                                                                       :force force-focus})]
     (ink/useInput
@@ -142,6 +172,7 @@
     [:> Box {:width (:cols size)
              :height (dec (:rows size))
              :flex-direction "column"}
+     [confirmation-modal]
      (case (:type active-input-panel)
        :playlist-rename
        (let [{:keys [id name]} (:arg active-input-panel)]
@@ -182,7 +213,10 @@
                              :playlist-open (dispatch [:set-selected-playlist (:id arg)])
                              :playlist-rename (dispatch [:playlist-rename arg])
                              :playlist-edit-description (dispatch [:playlist-edit-description arg])
-                             :playlist-unfollow (dispatch [:playlist-unfollow (:id arg)])
+                             :playlist-unfollow (dispatch [:spotin/open-confirmation-modal
+                                                           {:title "Delete playlist"
+                                                            :description (str "Are you sure you want to delete playlist '" (:name arg) "'?")
+                                                            :on-submit #(dispatch [:playlist-unfollow (:id arg)])}])
                              :open-album (dispatch [:spotin/open-album (-> arg :track :album :id)])
                              (dispatch [:run-action action]))))
           :on-cancel #(dispatch [:close-action-menu])}])

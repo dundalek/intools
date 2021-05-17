@@ -10,4 +10,5 @@
    :actions-search-query nil
    :track-search-query nil
    :active-input-panel nil
+   :confirmation-modal nil
    :routes nil})
