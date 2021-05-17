@@ -3,7 +3,7 @@
             [ink :refer [Box Spacer Text]]
             [intools.hooks :as hooks]
             [intools.spotin.format :refer [format-duration]]
-            [intools.views :refer [uncontrolled-text-input use-selectable-list]]
+            [intools.views :refer [scroll-status uncontrolled-text-input use-selectable-list]]
             [react]))
 
 (defn track-item [{:keys [track]} {:keys [is-selected]}]
@@ -18,22 +18,23 @@
      [:> Box {:width 6 :justify-content "flex-end"}
       [:> Text {:bold is-selected :color (when is-selected "green")} (format-duration duration_ms)]]]))
 
-(defn playlist-header [{:keys [playlist]}]
-  (let [{:keys [name description owner tracks]} playlist]
+(defn playlist-header [{:keys [playlist tracks]}]
+  (let [{:keys [name description owner]} playlist]
     [:> Box {:flex-direction "column"
              :margin-bottom 1}
      [:> Box
       [:> Text {:dim-color true} "playlist    "]
-      [:> Text name]
+      [:> Text {:wrap "truncate-end"} name]
       [:> Spacer]
-      [:> Text {:dim-color true} "by "]
-      [:> Text (:display_name owner)]
+      [:> Text {:dim-color true} " by "]
+      [:> Text {:wrap "truncate-end"} (:display_name owner)]
       [:> Spacer]
-      [:> Text (:total tracks) " songs" #_", 3hr 42 min"]]
+      [:> Text (count tracks)]
+      [:> Text {:dim-color true} " songs" #_", 3hr 42 min"]]
      (when-not (str/blank? description)
        [:> Box
         [:> Text {:dim-color true} "description "]
-        [:> Text description]])]))
+        [:> Text {:wrap "truncate-end"} description]])]))
 
 (defn tracks-panel [{:keys [focus-id playlist tracks is-searching
                             on-activate on-menu on-search-change on-search-cancel]}]
@@ -63,9 +64,9 @@
              :border-style "single"
              :border-color (when is-focused "green")
              :padding-x 1}
-     #_[:> Box [:> Text selected-index " of " (count tracks) " offset=" offset " viewport=" viewport-height]]
      (when playlist
-       [playlist-header {:playlist playlist}])
+       [playlist-header {:playlist playlist
+                         :tracks tracks}])
      (when is-searching
        [:> Box {:height 2}
         [:> Text "Search tracks: "]
@@ -80,5 +81,5 @@
             (fn [idx {:keys [id] :as item}]
               ^{:key idx}
               [track-item item {:is-selected (= idx (- selected-index offset))
-                                :is-active (contains? selected id)}])))]]))
-
+                                :is-active (contains? selected id)}])))]
+     [scroll-status selected-index tracks]]))

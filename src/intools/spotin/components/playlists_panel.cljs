@@ -1,7 +1,7 @@
 (ns intools.spotin.components.playlists-panel
   (:require [ink :refer [Box Text]]
             [intools.hooks :as hooks]
-            [intools.views :refer [uncontrolled-text-input use-selectable-list-controlled]]
+            [intools.views :refer [scroll-status uncontrolled-text-input use-selectable-list-controlled]]
             [react]))
 
 (defn playlist-item [{:keys [name]} {:keys [is-selected is-active]}]
@@ -36,12 +36,6 @@
         offset (hooks/use-scrollable-offset {:selected-index selected-index
                                              :height viewport-height})
         displayed-items (->> playlists (drop offset) (take viewport-height))]
-
-    (react/useEffect
-     (fn []
-       (on-select 0)
-       js/undefined)
-     #js [(count playlists)])
 
     (react/useEffect
      (fn []
@@ -82,4 +76,5 @@
             (fn [idx {:keys [id] :as item}]
               ^{:key idx}
               [playlist-item item {:is-selected (= idx (- selected-index offset))
-                                   :is-active (contains? selected id)}])))]]))
+                                   :is-active (contains? selected id)}])))]
+     [scroll-status selected-index playlists]]))

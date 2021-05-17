@@ -99,7 +99,7 @@
   #_(hooks/use-fullscreen)
   (let [app (ink/useApp)
         size (hooks/use-window-size)
-        {:keys [playlists playlist-tracks actions active-input-panel playlist-search-query track-search-query]} @(subscribe [:db])
+        {:keys [playlists actions active-input-panel playlist-search-query track-search-query]} @(subscribe [:db])
         playlists-filtered @(subscribe [:spotin/playlists-filtered])
         actions-filtered @(subscribe [:spotin/actions-filtered])
         actions-search-query @(subscribe [:spotin/actions-search-query])

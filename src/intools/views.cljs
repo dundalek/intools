@@ -1,5 +1,5 @@
 (ns intools.views
-  (:require [ink :refer [Box Text]]
+  (:require [ink :refer [Box Spacer Text]]
             [ink-text-input :refer [default] :rename {default TextInput}]
             [intools.hooks :as hooks]
             [react]))
@@ -20,7 +20,15 @@
          (= input " ") (when on-toggle
                          (on-toggle (nth items selected-index)))
          :else (when on-input
-                 (on-input input key)))))))
+                 (on-input input key))))))
+
+  ;; reset current index if number of items changes
+  ;; add an option to disable this if it will not be desirable in some situation
+  (react/useEffect
+   (fn []
+     (on-select 0)
+     js/undefined)
+   #js [(count items)]))
 
 (defn use-selectable-list-controlled [{:keys [focus-id auto-focus selected-index] :as opts}]
   (let [{:keys [is-focused]} (hooks/use-focus {:id focus-id
@@ -71,3 +79,9 @@
                       (dissoc :default-value :on-cancel)
                       (assoc :value value
                              :on-change on-change))]))
+
+(defn scroll-status [index items]
+  ;; It would be nice to render this over the bottom border
+  [:> Box {:height 1}
+   [:> Spacer]
+   [:> Text {:dim-color true} (inc index) " of " (count items)]])

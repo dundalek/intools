@@ -20,13 +20,6 @@
                                                               :on-cancel #(if is-searching
                                                                             (on-search-cancel)
                                                                             (on-cancel))})]
-
-    (react/useEffect
-     (fn []
-       (on-select 0)
-       js/undefined)
-     #js [(count actions)])
-
     [:> Box {:flex-direction "column"
              :border-style "single"
              :border-color (when is-focused "green")
