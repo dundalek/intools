@@ -11,7 +11,6 @@
             [intools.spotin.components.shortcuts-bar :refer [shortcuts-bar]]
             [intools.spotin.components.status-bar :refer [status-bar]]
             [intools.spotin.components.tracks-panel :refer [tracks-panel]]
-            [intools.spotin.components.playlist-search-bar :refer [playlist-search-bar]]
             [re-frame.core :as rf :refer [dispatch subscribe]]
             [intools.spotin.app.events]
             [intools.spotin.app.fx]
@@ -26,17 +25,22 @@
 (def player-actions
   [{:id :play-pause
     :name "play/pause"
-    :shortcut "z"}
+    :shortcut "z"
+    :event [:run-action :play-pause]}
    {:id :next
     :name "next"
-    :shortcut "n"}
+    :shortcut "n"
+    :event [:run-action :next]}
    {:id :previous
     :name "previous"
-    :shortcut "b"}
+    :shortcut "b"
+    :event [:run-action :previous]}
    {:id :shuffle
-    :name "shuffle"}
+    :name "shuffle"
+    :event [:run-action :shuffle]}
    {:id :repeat
-    :name "repeat"}])
+    :name "repeat"
+    :event [:run-action :repeat]}])
 
 (def playlist-actions
   [{:id :playlist-open
@@ -56,12 +60,16 @@
     :name "share"}
    action-separator
    {:id :spotin/open-random-playlist
-    :name "open random"}
+    :name "open random"
+    :shortcut "g"
+    :event [:spotin/open-random-playlist]}
    {:id :spotin/refresh-playlists
-    :name "refresh"}
+    :name "refresh"
+    :shortcut "r"}
    {:id :spotin/start-playlist-search
     :name "search"
-    :shortcut "/"}])
+    :shortcut "/"
+    :event [:spotin/start-playlist-search]}])
 
 (def playlists-actions
   [{:id :playlists-mix
@@ -87,29 +95,41 @@
   #_(hooks/use-fullscreen)
   (let [app (ink/useApp)
         size (hooks/use-window-size)
-        {:keys [playlist-order playlists playlist-tracks actions active-input-panel playlist-search-query]} @(subscribe [:db])
+        {:keys [playlists playlist-tracks actions active-input-panel playlist-search-query]} @(subscribe [:db])
         playlists-filtered @(subscribe [:spotin/playlists-filtered])
+        actions-filtered @(subscribe [:spotin/actions-filtered])
+        actions-search-query @(subscribe [:spotin/actions-search-query])
         current-route @(subscribe [:spotin/current-route])
         focused-component-id (cond
+                               actions-search-query "action-menu-search-bar"
                                playlist-search-query "playlist-search-bar"
                                actions "action-menu"
                                active-input-panel "input-bar")
-        {:keys [focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id})]
+        {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id})]
     (ink/useInput
      (fn [input _key]
        (case input
          "q" (do (.exit app)
                  (.exit js/process))
          "u" (dispatch [:spotin/router-back])
-          ;; TODO: dispatch based on shortcut definitions instead of hard-coding
-         "/" (dispatch [:spotin/start-playlist-search])
           ; "x" (dispatch (if actions
                           ; [:close-action-menu]
                           ; [:open-action-menu player-actions]))
-         (when-some [action (some (fn [{:keys [shortcut] :as action}]
-                                    (when (= shortcut input) action))
-                                  player-actions)]
-           (dispatch [:run-action action])))))
+         (when-some [{:keys [event shortcut] :as action} (->> (case active-focus-id
+                                                                "action-menu" actions
+                                                                "playlists-panel" (concat playlist-actions player-actions)
+                                                                player-actions)
+                                                              (some (fn [{:keys [shortcut] :as action}]
+                                                                      (when (= shortcut input) action))))]
+           (let [actions-focused? (= active-focus-id "action-menu")
+                 search-action? (and actions-focused? (= shortcut "/"))]
+             (when (and actions-focused? (not search-action?))
+               (dispatch [:close-action-menu]))
+             (cond
+               ;; override / to search in action menu - this is a bit hacky without event propagation
+               search-action? (dispatch [:spotin/set-actions-search ""])
+               event (dispatch event)
+               :else (dispatch [:run-action action])))))))
     [:> Box {:width (:cols size)
              :height (dec (:rows size))
              :flex-direction "column"}
@@ -141,32 +161,34 @@
      [:> Box {:flex-grow 1}
       (when actions
         [:f> action-menu
-         {:actions actions
-          :on-activate (fn [{:keys [id arg] :as action}]
+         {:actions actions-filtered
+          :is-searching (boolean actions-search-query)
+          :on-search-change #(dispatch [:spotin/set-actions-search %])
+          :on-search-cancel #(dispatch [:spotin/set-actions-search nil])
+          :on-activate (fn [{:keys [id arg event] :as action}]
                          (dispatch [:close-action-menu])
-                         (case id
-                           :playlist-open (do
-                                            (dispatch [:set-selected-playlist (:id arg)])
-                                            (dispatch [:close-action-menu]))
-                           :playlist-rename (dispatch [:playlist-rename arg])
-                           :playlist-edit-description (dispatch [:playlist-edit-description arg])
-                           :playlist-unfollow (dispatch [:playlist-unfollow (:id arg)])
-                           :open-album (dispatch [:spotin/open-album (-> arg :track :album :id)])
-                           :spotin/open-random-playlist (do (dispatch [:spotin/open-random-playlist])
-                                                            (dispatch [:close-action-menu]))
-                           :spotin/start-playlist-search (do (dispatch [:spotin/start-playlist-search])
-                                                             (dispatch [:close-action-menu]))
-                           (dispatch [:run-action action])))
+                         (if event
+                           (dispatch event)
+                           (case id
+                             :playlist-open (dispatch [:set-selected-playlist (:id arg)])
+                             :playlist-rename (dispatch [:playlist-rename arg])
+                             :playlist-edit-description (dispatch [:playlist-edit-description arg])
+                             :playlist-unfollow (dispatch [:playlist-unfollow (:id arg)])
+                             :open-album (dispatch [:spotin/open-album (-> arg :track :album :id)])
+                             (dispatch [:run-action action]))))
           :on-cancel #(dispatch [:close-action-menu])}])
       [:> Box {:width "20%"
                :flex-direction "column"}
        #_[:f> library-panel]
        (when playlist-search-query
-         [:f> playlist-search-bar {:on-change #(dispatch [:spotin/set-playlist-search %])
-                                   :on-cancel (fn []
-                                                (focus-next)
-                                                (dispatch [:spotin/clear-playlist-search]))}])
-       [:f> playlists-panel {:selected-playlist-id (-> current-route :params :playlist-id)
+         [:f> input-bar {:focus-id "playlist-search-bar"
+                         :label "Search playlists:"
+                         :on-change #(dispatch [:spotin/set-playlist-search %])
+                         :on-cancel (fn []
+                                      (focus-next)
+                                      (dispatch [:spotin/clear-playlist-search]))}])
+       [:f> playlists-panel {:focus-id "playlists-panel"
+                             :selected-playlist-id (-> current-route :params :playlist-id)
                              :playlists playlists-filtered
                              :on-menu (fn [playlist playlist-ids]
                                         (let [playlist-actions (map #(assoc % :arg playlist) playlist-actions)
@@ -180,7 +202,7 @@
                                           (dispatch [:open-action-menu actions])))
                              :on-activate (fn [{:keys [id]}]
                                             (dispatch [:set-selected-playlist id])
-                                            ;; Try to focus the tracks panel after playlist selected, it is a bit brittle
+                                           ;; Try to focus the tracks panel after playlist selected, it is a bit brittle
                                             (focus-next))}]]
       (case (:name current-route)
         :playlist

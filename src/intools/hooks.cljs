@@ -112,7 +112,8 @@
            (.focusNext context)))
        js/undefined)
      #js [requested-id active-id])
-    {:enable-focus (.-enableFocus context)
+    {:active-focus-id active-id
+     :enable-focus (.-enableFocus context)
      :disable-focus (.-disableFocus context)
      :focus-next (.-focusNext context)
      :focus-previous (.-focusPrevious context)}))

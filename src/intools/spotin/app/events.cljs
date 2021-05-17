@@ -78,7 +78,9 @@
 
 (reg-event-db :close-action-menu
   (fn [db _]
-    (assoc db :actions nil)))
+    (assoc db
+           :actions nil
+           :actions-search-query nil)))
 
 (reg-event-db :open-input-panel
   (fn [db [_ data]]
@@ -125,3 +127,7 @@
 (reg-event-db :spotin/clear-playlist-search
   (fn [db _]
     (set-playlist-search db nil)))
+
+(reg-event-db :spotin/set-actions-search
+  (fn [db [_ query]]
+    (assoc db :actions-search-query query)))

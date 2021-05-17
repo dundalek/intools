@@ -1,6 +1,6 @@
 (ns intools.spotin.app.subs
   (:require [re-frame.core :refer [reg-sub]]
-            [clojure.string :as str]))
+            [intools.search :as search]))
 
 (reg-sub :db
   (fn [db _]
@@ -31,9 +31,18 @@
   :<- [:spotin/playlist-order]
   :<- [:spotin/playlist-search-query]
   (fn [[playlists playlist-order playlist-search-query]]
-    (let [query (some-> playlist-search-query str/trim str/lower-case)
-          playlists-coll (map #(get playlists %) playlist-order)]
-      (cond->> playlists-coll
-        (not (str/blank? query))
-        (filter (fn [{:keys [name]}]
-                  (str/includes? (str/lower-case name) playlist-search-query)))))))
+    (search/filter-by playlist-search-query :name (map #(get playlists %) playlist-order))))
+
+(reg-sub :spotin/actions
+  (fn [db]
+    (:actions db)))
+
+(reg-sub :spotin/actions-search-query
+  (fn [db]
+    (:actions-search-query db)))
+
+(reg-sub :spotin/actions-filtered
+  :<- [:spotin/actions]
+  :<- [:spotin/actions-search-query]
+  (fn [[actions query]]
+    (search/filter-by query :name actions)))

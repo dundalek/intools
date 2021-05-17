@@ -6,6 +6,7 @@
    :playlist-tracks {}
    :playlist-search-query nil
    :selected-playlist nil
-   :action-menu nil
-   :input-panel nil
+   :actions nil
+   :actions-search-query nil
+   :active-input-panel nil
    :routes nil})

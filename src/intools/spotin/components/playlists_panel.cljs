@@ -12,7 +12,7 @@
             :wrap "truncate-end"}
    name])
 
-(defn playlists-panel [{:keys [selected-playlist-id playlists on-activate on-menu]}]
+(defn playlists-panel [{:keys [focus-id selected-playlist-id playlists on-activate on-menu]}]
   (let [[selected-index on-select] (react/useState 0)
         [selected set-selected] (react/useState #{})
         on-toggle (fn [{:keys [id]}]
@@ -21,7 +21,8 @@
                       (set-selected value)))
 
         {:keys [selected-index is-focused]}
-        (use-selectable-list-controlled {:selected-index selected-index
+        (use-selectable-list-controlled {:focus-id focus-id
+                                         :selected-index selected-index
                                          :on-select on-select
                                          :items playlists
                                          :on-activate #(on-activate %)
@@ -37,7 +38,8 @@
 
     (react/useEffect
      (fn []
-       (on-select 0))
+       (on-select 0)
+       js/undefined)
      #js [(count playlists)])
 
     (react/useEffect
