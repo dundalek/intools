@@ -101,35 +101,35 @@
         actions-search-query @(subscribe [:spotin/actions-search-query])
         current-route @(subscribe [:spotin/current-route])
         focused-component-id (cond
-                               actions-search-query "action-menu-search-bar"
                                playlist-search-query "playlist-search-bar"
                                actions "action-menu"
                                active-input-panel "input-bar")
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id})]
     (ink/useInput
      (fn [input _key]
-       (case input
-         "q" (do (.exit app)
-                 (.exit js/process))
-         "u" (dispatch [:spotin/router-back])
-          ; "x" (dispatch (if actions
-                          ; [:close-action-menu]
-                          ; [:open-action-menu player-actions]))
-         (when-some [{:keys [event shortcut] :as action} (->> (case active-focus-id
-                                                                "action-menu" actions
-                                                                "playlists-panel" (concat playlist-actions player-actions)
-                                                                player-actions)
-                                                              (some (fn [{:keys [shortcut] :as action}]
-                                                                      (when (= shortcut input) action))))]
-           (let [actions-focused? (= active-focus-id "action-menu")
-                 search-action? (and actions-focused? (= shortcut "/"))]
-             (when (and actions-focused? (not search-action?))
-               (dispatch [:close-action-menu]))
-             (cond
-               ;; override / to search in action menu - this is a bit hacky without event propagation
-               search-action? (dispatch [:spotin/set-actions-search ""])
-               event (dispatch event)
-               :else (dispatch [:run-action action])))))))
+       (when-not (or actions-search-query playlist-search-query)
+         (case input
+           "q" (do (.exit app)
+                   (.exit js/process))
+           "u" (dispatch [:spotin/router-back])
+            ; "x" (dispatch (if actions
+                            ; [:close-action-menu]
+                            ; [:open-action-menu player-actions]))
+           (when-some [{:keys [event shortcut] :as action} (->> (case active-focus-id
+                                                                  "action-menu" actions
+                                                                  "playlists-panel" (concat playlist-actions player-actions)
+                                                                  player-actions)
+                                                                (some (fn [{:keys [shortcut] :as action}]
+                                                                        (when (= shortcut input) action))))]
+             (let [actions-focused? (= active-focus-id "action-menu")
+                   search-action? (and actions-focused? (= shortcut "/"))]
+               (when (and actions-focused? (not search-action?))
+                 (dispatch [:close-action-menu]))
+               (cond
+                 ;; override / to search in action menu - this is a bit hacky without event propagation
+                 search-action? (dispatch [:spotin/set-actions-search ""])
+                 event (dispatch event)
+                 :else (dispatch [:run-action action]))))))))
     [:> Box {:width (:cols size)
              :height (dec (:rows size))
              :flex-direction "column"}
@@ -162,7 +162,7 @@
       (when actions
         [:f> action-menu
          {:actions actions-filtered
-          :is-searching (boolean actions-search-query)
+          :is-searching (some? actions-search-query)
           :on-search-change #(dispatch [:spotin/set-actions-search %])
           :on-search-cancel #(dispatch [:spotin/set-actions-search nil])
           :on-activate (fn [{:keys [id arg event] :as action}]

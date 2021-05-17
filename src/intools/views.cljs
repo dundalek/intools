@@ -5,24 +5,29 @@
             [react]))
             ; [ink-select-input :refer [default] :rename {default SelectInput}]))
 
-(defn use-selectable-list-controlled [{:keys [focus-id items on-activate on-toggle on-cancel on-input auto-focus
-                                              selected-index on-select]}]
+(defn use-selectable-list-input [{:keys [is-focused items selected-index on-select
+                                         on-activate on-toggle on-cancel on-input]}]
+  (ink/useInput
+   (fn [input ^js key]
+     (when is-focused
+       (cond
+         (.-upArrow key) (on-select (Math/max 0 (dec selected-index)))
+         (.-downArrow key) (on-select (Math/min (dec (count items)) (inc selected-index)))
+         (.-return key) (when on-activate
+                          (on-activate (nth items selected-index)))
+         (.-escape key) (when on-cancel
+                          (on-cancel))
+         (= input " ") (when on-toggle
+                         (on-toggle (nth items selected-index)))
+         :else (when on-input
+                 (on-input input key)))))))
+
+(defn use-selectable-list-controlled [{:keys [focus-id auto-focus selected-index] :as opts}]
   (let [{:keys [is-focused]} (hooks/use-focus {:id focus-id
                                                :auto-focus auto-focus})]
-    (ink/useInput
-     (fn [input ^js key]
-       (when is-focused
-         (cond
-           (.-upArrow key) (on-select (Math/max 0 (dec selected-index)))
-           (.-downArrow key) (on-select (Math/min (dec (count items)) (inc selected-index)))
-           (.-return key) (when on-activate
-                            (on-activate (nth items selected-index)))
-           (.-escape key) (when on-cancel
-                            (on-cancel))
-           (= input " ") (when on-toggle
-                           (on-toggle (nth items selected-index)))
-           :else (when on-input
-                   (on-input input key))))))
+    (use-selectable-list-input (-> opts
+                                   (dissoc :focus-id :auto-focus)
+                                   (assoc :is-focused is-focused)))
     {:selected-index selected-index
      :is-focused is-focused}))
 
