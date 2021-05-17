@@ -8,5 +8,6 @@
    :selected-playlist nil
    :actions nil
    :actions-search-query nil
+   :track-search-query nil
    :active-input-panel nil
    :routes nil})

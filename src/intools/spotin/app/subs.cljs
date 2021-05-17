@@ -1,5 +1,6 @@
 (ns intools.spotin.app.subs
-  (:require [intools.search :as search]
+  (:require [clojure.string :as str]
+            [intools.search :as search]
             [re-frame.core :refer [reg-sub]]))
 
 (reg-sub :db
@@ -17,6 +18,10 @@
 (reg-sub :spotin/playlists
   (fn [db]
     (:playlists db)))
+
+(reg-sub :spotin/playlist-tracks
+  (fn [db]
+    (:playlist-tracks db)))
 
 (reg-sub :spotin/playlist-order
   (fn [db]
@@ -46,3 +51,28 @@
   :<- [:spotin/actions-search-query]
   (fn [[actions query]]
     (search/filter-by query :name actions)))
+
+(reg-sub :spotin/track-search-query
+  (fn [db]
+    (:track-search-query db)))
+
+(reg-sub :spotin/current-playlist-id
+  :<- [:spotin/current-route]
+  (fn [route]
+    (-> route :params :playlist-id)))
+
+(reg-sub :spotin/current-tracks
+  :<- [:spotin/playlist-tracks]
+  :<- [:spotin/current-playlist-id]
+  (fn [[playlist-tracks playlist-id]]
+    (get playlist-tracks playlist-id)))
+
+(reg-sub :spotin/tracks-filtered
+  :<- [:spotin/current-tracks]
+  :<- [:spotin/track-search-query]
+  (fn [[tracks query]]
+    (->> tracks
+         (search/filter-by query (fn [{{:keys [name album artists]} :track}]
+                                   (->> (concat [name (:name album)]
+                                                (map :name artists))
+                                        (str/join " ")))))))

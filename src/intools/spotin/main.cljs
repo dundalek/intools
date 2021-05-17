@@ -83,7 +83,11 @@
    {:id :like
     :name "add to Liked Songs"}
    {:id :add-to-library
-    :name "add to Library"}])
+    :name "add to Library"}
+   {:id :spotin/start-track-search
+    :name "search"
+    :shortcut "/"
+    :event [:spotin/set-track-search ""]}])
 
 (defn library-panel []
   (let [{:keys [is-focused]} (hooks/use-focus)]
@@ -95,18 +99,21 @@
   #_(hooks/use-fullscreen)
   (let [app (ink/useApp)
         size (hooks/use-window-size)
-        {:keys [playlists playlist-tracks actions active-input-panel playlist-search-query]} @(subscribe [:db])
+        {:keys [playlists playlist-tracks actions active-input-panel playlist-search-query track-search-query]} @(subscribe [:db])
         playlists-filtered @(subscribe [:spotin/playlists-filtered])
         actions-filtered @(subscribe [:spotin/actions-filtered])
         actions-search-query @(subscribe [:spotin/actions-search-query])
         current-route @(subscribe [:spotin/current-route])
+        tracks-filtered @(subscribe [:spotin/tracks-filtered])
         focused-component-id (cond
                                actions "action-menu"
                                active-input-panel "input-bar")
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id})]
     (ink/useInput
      (fn [input _key]
-       (when-not (or actions-search-query playlist-search-query)
+       (when-not (or (and (= active-focus-id "action-menu") actions-search-query)
+                     (and (= active-focus-id "playlists-panel") playlist-search-query)
+                     (and (= active-focus-id "tracks-panel") track-search-query))
          (case input
            "q" (do (.exit app)
                    (.exit js/process))
@@ -117,6 +124,7 @@
            (when-some [{:keys [event shortcut] :as action} (->> (case active-focus-id
                                                                   "action-menu" actions
                                                                   "playlists-panel" (concat playlist-actions player-actions)
+                                                                  "tracks-panel" (concat track-actions player-actions)
                                                                   player-actions)
                                                                 (some (fn [{:keys [shortcut] :as action}]
                                                                         (when (= shortcut input) action))))]
@@ -203,8 +211,12 @@
         :playlist
         (let [{:keys [playlist-id]} (:params current-route)]
           ^{:key playlist-id}
-          [:f> tracks-panel {:playlist (get playlists playlist-id)
-                             :tracks (get playlist-tracks playlist-id)
+          [:f> tracks-panel {:focus-id "tracks-panel"
+                             :playlist (get playlists playlist-id)
+                             :tracks tracks-filtered
+                             :is-searching (some? track-search-query)
+                             :on-search-change #(dispatch [:spotin/set-track-search %])
+                             :on-search-cancel #(dispatch [:spotin/set-track-search nil])
                              :on-menu (fn [item]
                                         (let [track-actions (map #(assoc % :arg item) track-actions)
                                               actions (concat track-actions [action-separator] player-actions)]

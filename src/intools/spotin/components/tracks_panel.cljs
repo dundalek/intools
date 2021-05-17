@@ -3,7 +3,7 @@
             [ink :refer [Box Spacer Text]]
             [intools.hooks :as hooks]
             [intools.spotin.format :refer [format-duration]]
-            [intools.views :refer [use-selectable-list]]
+            [intools.views :refer [uncontrolled-text-input use-selectable-list]]
             [react]))
 
 (defn track-item [{:keys [track]} {:keys [is-selected]}]
@@ -35,20 +35,20 @@
         [:> Text {:dim-color true} "description "]
         [:> Text description]])]))
 
-(defn tracks-panel [{:keys [playlist tracks on-activate on-menu]}]
+(defn tracks-panel [{:keys [focus-id playlist tracks is-searching
+                            on-activate on-menu on-search-change on-search-cancel]}]
   (let [[selected set-selected] (react/useState #{})
         on-toggle (fn [{:keys [id]}]
                     (let [op (if (contains? selected id) disj conj)]
                       (set-selected (op selected id))))
-        {:keys [selected-index is-focused]} (use-selectable-list {:items tracks
+        {:keys [selected-index is-focused]} (use-selectable-list {:focus-id focus-id
+                                                                  :items tracks
                                                                   :on-toggle on-toggle
                                                                   :on-activate on-activate
                                                                   :auto-focus true})
         box-ref (react/useRef)
         viewport (hooks/use-ref-size box-ref)
-        viewport-height (- (or (:height viewport) (count tracks))
-                           4
-                           (if (str/blank? (:description playlist)) 0 1))
+        viewport-height (or (:height viewport) (count tracks))
         offset (hooks/use-scrollable-offset {:selected-index selected-index
                                              :height viewport-height})
         displayed-tracks (->> tracks (drop offset) (take viewport-height))]
@@ -62,14 +62,23 @@
              :flex-grow 1
              :border-style "single"
              :border-color (when is-focused "green")
-             :padding-x 1
-             :ref box-ref}
+             :padding-x 1}
      #_[:> Box [:> Text selected-index " of " (count tracks) " offset=" offset " viewport=" viewport-height]]
-     (when playlist [playlist-header {:playlist playlist}])
-     (->> displayed-tracks
-          (map-indexed
-           (fn [idx {:keys [id] :as item}]
-             ^{:key idx}
-             [track-item item {:is-selected (= idx (- selected-index offset))
-                               :is-active (contains? selected id)}])))]))
+     (when playlist
+       [playlist-header {:playlist playlist}])
+     (when is-searching
+       [:> Box {:height 2}
+        [:> Text "Search tracks: "]
+        [:f> uncontrolled-text-input {:focus is-focused
+                                      :on-change on-search-change
+                                      :on-cancel on-search-cancel}]])
+     [:> Box {:flex-direction "column"
+              :flex-grow 1
+              :ref box-ref}
+      (->> displayed-tracks
+           (map-indexed
+            (fn [idx {:keys [id] :as item}]
+              ^{:key idx}
+              [track-item item {:is-selected (= idx (- selected-index offset))
+                                :is-active (contains? selected id)}])))]]))
 

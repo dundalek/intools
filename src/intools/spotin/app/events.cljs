@@ -131,3 +131,7 @@
 (reg-event-db :spotin/set-actions-search
   (fn [db [_ query]]
     (assoc db :actions-search-query query)))
+
+(reg-event-db :spotin/set-track-search
+  (fn [db [_ query]]
+    (assoc db :track-search-query query)))
