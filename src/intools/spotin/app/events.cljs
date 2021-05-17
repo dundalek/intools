@@ -108,6 +108,10 @@
   (fn [_ [_ {:keys [id arg]}]]
     {id arg}))
 
+(reg-event-fx :spotin/dispatch-fx
+  (fn [_ [_ id arg]]
+    {id arg}))
+
 (reg-event-fx :spotin/open-random-playlist
   (fn [{db :db :as cofx} _]
     (let [playlist-id (rand-nth (:playlist-order db))]

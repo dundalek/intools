@@ -26,21 +26,21 @@
   [{:id :play-pause
     :name "play/pause"
     :shortcut "z"
-    :event [:run-action :play-pause]}
+    :event [:spotin/dispatch-fx :play-pause]}
    {:id :next
     :name "next"
     :shortcut "n"
-    :event [:run-action :next]}
+    :event [:spotin/dispatch-fx :next]}
    {:id :previous
     :name "previous"
     :shortcut "b"
-    :event [:run-action :previous]}
+    :event [:spotin/dispatch-fx :previous]}
    {:id :shuffle
     :name "shuffle"
-    :event [:run-action :shuffle]}
+    :event [:spotin/dispatch-fx :shuffle]}
    {:id :repeat
     :name "repeat"
-    :event [:run-action :repeat]}])
+    :event [:spotin/dispatch-fx :repeat]}])
 
 (def playlist-actions
   [{:id :playlist-open
