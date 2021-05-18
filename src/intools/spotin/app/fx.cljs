@@ -44,6 +44,15 @@
                     (js/setTimeout #(dispatch [:spotin/update-playback-status request-id])
                                    1000))))))
 
+(reg-fx :spotin/player-seek
+  (fn [{:keys [progress request-id]}]
+    (-> (spotify/player-seek+ progress)
+        (.finally (fn []
+                    ;; There does not seem to be Read-your-writes consistency,
+                    ;; delay for a second before trying to fetch status update
+                    (js/setTimeout #(dispatch [:spotin/update-playback-status request-id])
+                                   1000))))))
+
 (reg-fx :playlist-share
   (fn [arg] (js/console.log "Playlist URI:" (:uri arg))))
 

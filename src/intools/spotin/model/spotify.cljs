@@ -246,6 +246,9 @@
 (defn player-volume+ [volume-percent]
   (authorized-put+ (str "https://api.spotify.com/v1/me/player/volume?volume_percent=" (js/encodeURIComponent volume-percent))))
 
+(defn player-seek+ [position-ms]
+  (authorized-put+ (str "https://api.spotify.com/v1/me/player/seek?position_ms=" (js/encodeURIComponent position-ms))))
+
 (defn player-play+
   ([] (player-play+ nil))
   ([opts]

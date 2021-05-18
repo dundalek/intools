@@ -222,3 +222,24 @@
 (reg-event-fx :spotin/player-volume-down
   (fn [{db :db}]
     (update-volume-fx db volume-down)))
+
+(def progress-path [:playback-status :progress_ms])
+
+(defn seek-fx [db update-fn]
+  ;; TODO it would be cleaner to use co-effect for counter
+  (let [request-id (swap! !request-counter inc)
+        old-progress (get-in db progress-path)
+        new-progress (update-fn old-progress)]
+    {:db (-> db
+             (assoc-in progress-path new-progress)
+             (assoc :playback-request-id request-id))
+     :spotin/player-seek {:progress new-progress
+                          :request-id request-id}}))
+
+(reg-event-fx :spotin/player-seek-forward
+  (fn [{db :db}]
+    (seek-fx db #(+ % 10000))))
+
+(reg-event-fx :spotin/player-seek-backward
+  (fn [{db :db}]
+    (seek-fx db #(-> % (- 10000) (Math/max 0)))))

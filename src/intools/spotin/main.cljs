@@ -51,13 +51,27 @@
     :name "volume down 10%"
     :shortcut "-"
     :event [:spotin/player-volume-down]}
+   {:id :spotin/player-seek-forward
+    :name "seek forward 10s"
+    :shortcut ">"
+    :event [:spotin/player-seek-forward]}
+   {:id :spotin/player-seek-backward
+    :name "seek back 10s"
+    :shortcut "<"
+    :event [:spotin/player-seek-backward]}
    {:id :spotin/devices
     :name "devices"
     :event [:spotin/open-devices-menu]}])
 
+(def excluded-from-shortcuts-bar?
+  #{:spotin/player-volume-up
+    :spotin/player-volume-down
+    :spotin/player-seek-forward
+    :spotin/player-seek-backward})
+
 (def shortcuts-bar-actions
   (->> player-actions
-       (remove (comp #{:spotin/player-volume-up :spotin/player-volume-down} :id))))
+       (remove (comp excluded-from-shortcuts-bar? :id))))
 
 (def playlist-actions
   [{:id :playlist-open
