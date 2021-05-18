@@ -137,7 +137,8 @@
    #js []))
 
 (defn playback-status-bar []
-  [status-bar @(subscribe [:spotin/playback-status])])
+  [status-bar {:playback @(subscribe [:spotin/playback-status])
+               :pending-requests @(subscribe [:spotin/pending-requests])}])
 
 (defn app []
   #_(hooks/use-fullscreen)
@@ -295,6 +296,8 @@
   (reset! !app (ink/render (r/as-element [:f> app]))))
 
 (defn -main []
+  (set! spotify/*before-request-callback* #(dispatch [:spotin/request-started]))
+  (set! spotify/*after-request-callback* #(dispatch [:spotin/request-finished]))
   (rf/dispatch-sync [:spotin/init])
   (render))
 

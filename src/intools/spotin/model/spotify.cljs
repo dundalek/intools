@@ -22,13 +22,8 @@
 (def refresh-token (.. js/process -env -SPOTIFY_REFRESH_TOKEN))
 
 (defonce ^:dynamic *access-token* nil)
-
-(defonce ^:dynamic playlists nil)
-(defonce ^:dynamic playlist nil)
-
-(defonce ^:dynamic selected-playlists nil)
-
-(defonce ^:dynamic tracks nil)
+(defonce ^:dynamic *before-request-callback* nil)
+(defonce ^:dynamic *after-request-callback* nil)
 
 (defn authorization-url []
   (str "https://accounts.spotify.com/authorize"
@@ -79,18 +74,24 @@
   (update opts :headers assoc :Authorization (str "Bearer " *access-token*)))
 
 (defn authorized-request+ [opts]
-  (-> (when-not *access-token*
-        (refresh-token+ refresh-token))
-      (js/Promise.resolve)
+  (-> (js/Promise.resolve)
       (.then #(rp (clj->js (add-authorization-header opts))))))
 
 (defn request-with-auto-refresh+ [opts]
-  (-> (authorized-request+ opts)
+  (-> (js/Promise.resolve)
+      (.then #(when *before-request-callback*
+                (*before-request-callback* opts)))
+      (.then #(when-not *access-token*
+                (refresh-token+ refresh-token)))
+      (.then #(authorized-request+ opts))
       (.catch (fn [e]
                 (if (expired-token? e)
+                  ;; We might get multiple refreshes for concurrent requests
                   (-> (refresh-token+ refresh-token)
                       (.then #(authorized-request+ opts)))
-                  (throw e))))))
+                  (throw e))))
+      (.finally #(when *after-request-callback*
+                   (*after-request-callback* opts)))))
 
 (def request+ request-with-auto-refresh+)
 

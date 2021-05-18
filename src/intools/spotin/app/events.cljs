@@ -15,6 +15,14 @@
      :fx [[:spotin/load-cached-playlists nil]
           [:spotin/refresh-playlists nil]]}))
 
+(reg-event-db :spotin/request-started
+  (fn [db]
+    (update db :pending-requests inc)))
+
+(reg-event-db :spotin/request-finished
+  (fn [db]
+    (update db :pending-requests dec)))
+
 (reg-event-db :spotin/router-navigate
   (fn [db [_ route]]
     (router-navigate db route)))

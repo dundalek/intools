@@ -11,6 +11,10 @@
   (fn [db _]
     (-> db :routes peek)))
 
+(reg-sub :spotin/pending-requests
+  (fn [db]
+    (-> db :pending-requests pos?)))
+
 (reg-sub :spotin/confirmation-modal
   (fn [db]
     (:confirmation-modal db)))

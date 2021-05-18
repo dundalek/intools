@@ -12,4 +12,5 @@
    :active-input-panel nil
    :confirmation-modal nil
    :playback-status nil
-   :routes nil})
+   :routes nil
+   :pending-requests 0})

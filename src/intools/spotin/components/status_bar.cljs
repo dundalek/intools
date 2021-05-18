@@ -1,26 +1,30 @@
 (ns intools.spotin.components.status-bar
-  (:require [clojure.string :as str]
+  (:require ["ink-spinner$default" :as Spinner]
+            [clojure.string :as str]
             [ink :refer [Box Text]]
             [intools.spotin.format :refer [format-duration]]
             [react]))
 
-(defn status-bar [playback]
+(defn status-bar [{:keys [playback pending-requests]}]
   (let [{:keys [is_playing progress_ms shuffle_state repeat_state device item]} playback
         {:keys [duration_ms album artists] item-name :name} item]
-
     [:> Box {:border-style "single"
              :flex-direction "column"
              :padding-x 1}
-     (if is_playing
-       [:> Box {:justify-content "center"}
-        [:> Text {:dim-color true} "playing "]
-        [:> Text item-name]
-        [:> Text {:dim-color true} " by "]
-        [:> Text (str/join ", " (map :name artists))]
-        #_[:> Text {:dim-color true} " from "]
-        #_[:> Text (:name album)]]
-       [:> Box {:justify-content "center"}
-        [:> Text {:dim-color true} "stopped"]])
+     [:> Box {:justify-content "center"
+              :padding-right 2} ; padding to compensate for space taken by spinner
+      [:> Text
+       (if pending-requests [:> Spinner] " ")
+       " "]
+      (if is_playing
+        [:<>
+         [:> Text {:dim-color true} "playing "]
+         [:> Text item-name]
+         [:> Text {:dim-color true} " by "]
+         [:> Text (str/join ", " (map :name artists))]
+         #_[:> Text {:dim-color true} " from "]
+         #_[:> Text (:name album)]]
+        [:> Text {:dim-color true} "stopped"])]
      [:> Box {:margin-top 1}
       [:> Text (:name device)]
       [:> Box {:flex-grow 1}]
