@@ -19,6 +19,8 @@
 (defonce !app (atom nil))
 (declare render)
 
+(def sidepanel-width "20%")
+
 (def action-separator
   {:name ""})
 
@@ -40,7 +42,10 @@
     :event [:spotin/dispatch-fx :shuffle]}
    {:id :repeat
     :name "repeat"
-    :event [:spotin/dispatch-fx :repeat]}])
+    :event [:spotin/dispatch-fx :repeat]}
+   {:id :spotin/devices
+    :name "devices"
+    :event [:spotin/open-devices-menu]}])
 
 (def playlist-actions
   [{:id :playlist-open
@@ -140,6 +145,33 @@
   [status-bar {:playback @(subscribe [:spotin/playback-status])
                :pending-requests @(subscribe [:spotin/pending-requests])}])
 
+(defn device-item [{:keys [name type is_active]} {:keys [is-selected]}]
+  [:> Box
+   [:> Text {:bold is-selected
+             :color (when is-selected "green")
+             :wrap "truncate-end"}
+    (if is_active "* " "  ")
+    name " " type]])
+
+(defn devices-menu []
+  (let [[devices set-devices] (react/useState [])
+        actions (->> devices
+                     (map (fn [{:keys [id] :as device}]
+                            (-> device
+                                (select-keys [:id :name :type :is_active])))))]
+    (react/useEffect
+     (fn []
+       (-> (spotify/get-player-devices+)
+           (.then #(set-devices (:devices %))))
+       js/undefined)
+     #js [])
+    [:f> action-menu {:actions actions
+                      :item-component device-item
+                      :width sidepanel-width
+                      :on-cancel #(dispatch [:spotin/close-devices-menu])
+                      :on-activate (fn [{:keys [id]}]
+                                     (dispatch [:spotin/player-transfer id]))}]))
+
 (defn app []
   #_(hooks/use-fullscreen)
   (let [app (ink/useApp)
@@ -153,13 +185,13 @@
         playback-item-uri @(subscribe [:spotin/playback-item-uri])
         playback-context-uri @(subscribe [:spotin/playback-context-uri])
         confirmation-modal-open? (some? @(subscribe [:spotin/confirmation-modal]))
+        devices-menu-open? @(subscribe [:spotin/devices-menu])
         focused-component-id (cond
                                confirmation-modal-open? "confirmation-modal"
-                               actions "action-menu"
+                               (or actions devices-menu-open?) "action-menu"
                                active-input-panel "input-bar")
-        force-focus (contains? #{"action-menu" "input-bar" "confirmation-modal"} focused-component-id)
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id
-                                                                                      :force force-focus})]
+                                                                                      :force true})]
     ; (use-playback-status #(dispatch [:spotin/set-playback-status %]))
     (ink/useInput
      (fn [input _key]
@@ -219,6 +251,8 @@
 
        nil)
      [:> Box {:flex-grow 1}
+      (when devices-menu-open?
+        [:f> devices-menu])
       (when actions
         [:f> action-menu
          {:actions actions-filtered
@@ -240,30 +274,31 @@
                              :open-album (dispatch [:spotin/open-album (-> arg :track :album :id)])
                              (dispatch [:run-action action]))))
           :on-cancel #(dispatch [:close-action-menu])}])
-      [:> Box {:width "20%"
-               :flex-direction "column"}
-       #_[:f> library-panel]
-       [:f> playlists-panel {:focus-id "playlists-panel"
-                             :selected-playlist-id (-> current-route :params :playlist-id)
-                             :playlists playlists-filtered
-                             :is-searching (some? playlist-search-query)
-                             :playback-context-uri playback-context-uri
-                             :on-search-change #(dispatch [:spotin/set-playlist-search %])
-                             :on-search-cancel #(dispatch [:spotin/clear-playlist-search])
-                             :on-menu (fn [playlist playlist-ids]
-                                        (let [playlist-actions (map #(assoc % :arg playlist) playlist-actions)
-                                              selected-playlists (map #(get playlists %) playlist-ids)
-                                              playlists-actions (when (seq playlist-ids)
-                                                                  (map #(assoc % :arg selected-playlists) playlists-actions))
-                                              actions (concat playlist-actions
-                                                              playlists-actions
-                                                              [action-separator]
-                                                              player-actions)]
-                                          (dispatch [:open-action-menu actions])))
-                             :on-activate (fn [{:keys [id]}]
-                                            (dispatch [:set-selected-playlist id])
-                                            ;; Try to focus the tracks panel after playlist selected, it is a bit brittle
-                                            (focus-next))}]]
+      (when-not devices-menu-open?
+        [:> Box {:width sidepanel-width
+                 :flex-direction "column"}
+         #_[:f> library-panel]
+         [:f> playlists-panel {:focus-id "playlists-panel"
+                               :selected-playlist-id (-> current-route :params :playlist-id)
+                               :playlists playlists-filtered
+                               :is-searching (some? playlist-search-query)
+                               :playback-context-uri playback-context-uri
+                               :on-search-change #(dispatch [:spotin/set-playlist-search %])
+                               :on-search-cancel #(dispatch [:spotin/clear-playlist-search])
+                               :on-menu (fn [playlist playlist-ids]
+                                          (let [playlist-actions (map #(assoc % :arg playlist) playlist-actions)
+                                                selected-playlists (map #(get playlists %) playlist-ids)
+                                                playlists-actions (when (seq playlist-ids)
+                                                                    (map #(assoc % :arg selected-playlists) playlists-actions))
+                                                actions (concat playlist-actions
+                                                                playlists-actions
+                                                                [action-separator]
+                                                                player-actions)]
+                                            (dispatch [:open-action-menu actions])))
+                               :on-activate (fn [{:keys [id]}]
+                                              (dispatch [:set-selected-playlist id])
+                                              ;; Try to focus the tracks panel after playlist selected, it is a bit brittle
+                                              (focus-next))}]])
       (case (:name current-route)
         :playlist
         (let [{:keys [playlist-id]} (:params current-route)]

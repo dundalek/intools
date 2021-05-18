@@ -21,6 +21,10 @@
 (reg-fx :playlist-play
   (fn [arg] (spotify/player-play+ {:context_uri (:uri arg)})))
 
+(reg-fx :spotin/player-transfer
+  (fn [device-id]
+    (spotify/player-transfer+ device-id)))
+
 (reg-fx :playlist-share
   (fn [arg] (js/console.log "Playlist URI:" (:uri arg))))
 

@@ -159,3 +159,16 @@
 (reg-event-db :spotin/close-confirmation-modal
   (fn [db]
     (assoc db :confirmation-modal nil)))
+
+(reg-event-db :spotin/open-devices-menu
+  (fn [db]
+    (assoc db :devices-menu true)))
+
+(reg-event-db :spotin/close-devices-menu
+  (fn [db]
+    (assoc db :devices-menu false)))
+
+(reg-event-fx :spotin/player-transfer
+  (fn [{db :db} [_ device-id]]
+    {:db (assoc db :devices-menu false)
+     :spotin/player-transfer device-id}))

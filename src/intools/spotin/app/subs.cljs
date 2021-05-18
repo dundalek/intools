@@ -99,3 +99,7 @@
                                    (->> (concat [name (:name album)]
                                                 (map :name artists))
                                         (str/join " ")))))))
+
+(reg-sub :spotin/devices-menu
+  (fn [db]
+    (:devices-menu db)))

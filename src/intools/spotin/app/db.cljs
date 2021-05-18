@@ -11,6 +11,7 @@
    :track-search-query nil
    :active-input-panel nil
    :confirmation-modal nil
+   :devices-menu false
    :playback-status nil
    :routes nil
    :pending-requests 0})

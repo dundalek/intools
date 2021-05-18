@@ -226,6 +226,10 @@
 (defn get-player+ []
   (authorized-get+ "https://api.spotify.com/v1/me/player"))
 
+(defn get-player-devices+ []
+  (-> (authorized-get+ "https://api.spotify.com/v1/me/player/devices")
+      (.then #(js->clj % :keywordize-keys true))))
+
 ;; TODO pagination
 ;; :tracks :next
 ;; (when next)
@@ -234,6 +238,10 @@
 (defn create-playlist+ [user-id {:keys [_name _public _collaborative _description] :as opts}]
   (authorized-post+ (str "https://api.spotify.com/v1/users/" user-id "/playlists")
                     (merge {:public false :collaborative false} opts)))
+
+(defn player-transfer+ [device-id]
+  (let [opts #js {:device_ids #js [device-id]}]
+    (authorized-put+ "https://api.spotify.com/v1/me/player" opts)))
 
 (defn player-play+
   ([] (player-play+ nil))
@@ -283,4 +291,3 @@
   (-> (authorized-get+ "https://api.spotify.com/v1/me")
       (.then (fn [^js body]
                (.-id body)))))
-

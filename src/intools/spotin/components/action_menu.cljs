@@ -4,12 +4,16 @@
             [react]))
 
 (defn action-item [{:keys [shortcut name]} {:keys [is-selected]}]
-  [:> Text {:bold is-selected
-            :color (when is-selected "green")
-            :wrap "truncate-end"}
-   (or shortcut " ") " " name])
+  [:> Box
+   [:> Text {:bold is-selected
+             :color (when is-selected "green")
+             :wrap "truncate-end"}
+    (or shortcut " ") " " name]])
 
-(defn action-menu [{:keys [actions is-searching on-activate on-cancel on-search-change on-search-cancel]}]
+(defn action-menu [{:keys [actions is-searching item-component width
+                           on-activate on-cancel on-search-change on-search-cancel]
+                    :or {item-component action-item
+                         width 20}}]
   (let [[selected-index on-select] (react/useState 0)
         {:keys [is-focused]} (use-selectable-list-controlled {:focus-id "action-menu"
                                                               :auto-focus true
@@ -23,7 +27,7 @@
     [:> Box {:flex-direction "column"
              :border-style "single"
              :border-color (when is-focused "green")
-             :width 20}
+             :width width}
      (when is-searching
        [:> Box {:flex-direction "column"
                 :height 3}
@@ -35,5 +39,5 @@
           (map-indexed
            (fn [idx item]
              ^{:key idx}
-             [action-item item {:is-selected (= idx selected-index)}])))]))
+             [item-component item {:is-selected (= idx selected-index)}])))]))
 
