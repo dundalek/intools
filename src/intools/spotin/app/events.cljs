@@ -31,9 +31,31 @@
   (fn [db _]
     (router-back db)))
 
+(defn- expected-request? [{:keys [playback-request-id] :as _db} request-id]
+  (or (not playback-request-id)
+      (= playback-request-id request-id)))
+
+(reg-event-fx :spotin/refresh-playback-status
+  (fn [{db :db}]
+    (when (expected-request? db nil)
+      {:spotin/fetch-playback-status nil})))
+
+(reg-event-fx :spotin/update-playback-status
+  (fn [{db :db} [_ request-id]]
+    (when (expected-request? db request-id)
+      {:spotin/fetch-playback-status request-id})))
+
+(reg-event-db :spotin/clear-playback-request-id
+  (fn [db [_ request-id]]
+    (when (expected-request? db request-id)
+      (assoc db :playback-request-id nil))))
+
 (reg-event-db :spotin/set-playback-status
-  (fn [db [_ status]]
-    (assoc db :playback-status status)))
+  (fn [db [_ status request-id]]
+    (when (expected-request? db request-id)
+      (assoc db
+             :playback-request-id nil
+             :playback-status status))))
 
 (reg-event-fx :spotin/refresh-playlists
   (fn [_ _]
@@ -172,3 +194,31 @@
   (fn [{db :db} [_ device-id]]
     {:db (assoc db :devices-menu false)
      :spotin/player-transfer device-id}))
+
+(def volume-path [:playback-status :device :volume_percent])
+
+(defn volume-up [value]
+  (Math/min 100 (+ value 10)))
+
+(defn volume-down [value]
+  (Math/max 0 (- value 10)))
+
+(defonce !request-counter (atom 0))
+(defn update-volume-fx [db update-fn]
+  ;; TODO it would be cleaner to use co-effect for counter
+  (let [request-id (swap! !request-counter inc)
+        old-volume (get-in db volume-path)
+        new-volume (update-fn old-volume)]
+    {:db (-> db
+             (assoc-in volume-path new-volume)
+             (assoc :playback-request-id request-id))
+     :spotin/player-volume {:volume-percent new-volume
+                            :request-id request-id}}))
+
+(reg-event-fx :spotin/player-volume-up
+  (fn [{db :db}]
+    (update-volume-fx db volume-up)))
+
+(reg-event-fx :spotin/player-volume-down
+  (fn [{db :db}]
+    (update-volume-fx db volume-down)))

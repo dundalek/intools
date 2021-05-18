@@ -3,6 +3,14 @@
             [ink]
             [react]))
 
+(defn use-interval [f delay]
+  (react/useEffect
+   (fn []
+     (let [interval-id (js/setInterval f delay)]
+       (f)
+       #(js/clearInterval interval-id)))
+   #js []))
+
 (def enterAltScreenCommand "\u001b[?1049h")
 (def leaveAltScreenCommand "\u001b[?1049l")
 

@@ -243,6 +243,9 @@
   (let [opts #js {:device_ids #js [device-id]}]
     (authorized-put+ "https://api.spotify.com/v1/me/player" opts)))
 
+(defn player-volume+ [volume-percent]
+  (authorized-put+ (str "https://api.spotify.com/v1/me/player/volume?volume_percent=" (js/encodeURIComponent volume-percent))))
+
 (defn player-play+
   ([] (player-play+ nil))
   ([opts]

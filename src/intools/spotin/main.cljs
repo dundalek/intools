@@ -43,9 +43,21 @@
    {:id :repeat
     :name "repeat"
     :event [:spotin/dispatch-fx :repeat]}
+   {:id :spotin/player-volume-up
+    :name "volume up 10%"
+    :shortcut "+"
+    :event [:spotin/player-volume-up]}
+   {:id :spotin/player-volume-down
+    :name "volume down 10%"
+    :shortcut "-"
+    :event [:spotin/player-volume-down]}
    {:id :spotin/devices
     :name "devices"
     :event [:spotin/open-devices-menu]}])
+
+(def shortcuts-bar-actions
+  (->> player-actions
+       (remove (comp #{:spotin/player-volume-up :spotin/player-volume-down} :id))))
 
 (def playlist-actions
   [{:id :playlist-open
@@ -128,19 +140,6 @@
                                                  (dispatch [:spotin/close-confirmation-modal])
                                                  (when on-cancel (on-cancel))))]))
 
-(defn use-playback-status [set-playback]
-  (react/useEffect
-   (fn []
-     (let [on-interval (fn []
-                         (-> (spotify/get-player+)
-                             (.then (fn [body]
-                                      (let [status (js->clj body :keywordize-keys true)]
-                                        (set-playback status))))))
-           interval-id (js/setInterval on-interval 5000)]
-       (on-interval)
-       #(js/clearInterval interval-id)))
-   #js []))
-
 (defn playback-status-bar []
   [status-bar {:playback @(subscribe [:spotin/playback-status])
                :pending-requests @(subscribe [:spotin/pending-requests])}])
@@ -192,7 +191,10 @@
                                active-input-panel "input-bar")
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id
                                                                                       :force true})]
-    ; (use-playback-status #(dispatch [:spotin/set-playback-status %]))
+    #_(hooks/use-interval
+       #(dispatch [:spotin/refresh-playback-status])
+       5000)
+
     (ink/useInput
      (fn [input _key]
        (when-not (or (and (= active-focus-id "action-menu") actions-search-query)
@@ -325,7 +327,7 @@
           [:f> album-panel {:album @(subscribe [:spotin/album-by-id album-id])}])
         nil)]
      [playback-status-bar]
-     [shortcuts-bar {:actions player-actions}]]))
+     [shortcuts-bar {:actions shortcuts-bar-actions}]]))
 
 (defn render []
   (reset! !app (ink/render (r/as-element [:f> app]))))
@@ -339,4 +341,3 @@
 (defn ^:dev/after-load reload! []
   (rf/clear-subscription-cache!)
   (.rerender ^js/InkInstance @!app (r/as-element [:f> app])))
-

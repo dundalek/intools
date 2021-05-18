@@ -14,4 +14,5 @@
    :devices-menu false
    :playback-status nil
    :routes nil
+   :playback-request-id nil
    :pending-requests 0})

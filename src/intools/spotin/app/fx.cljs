@@ -3,6 +3,16 @@
             [intools.spotin.model.spotify :as spotify]
             [re-frame.core :refer [dispatch reg-fx]]))
 
+(reg-fx :spotin/fetch-playback-status
+  (fn [request-id]
+    (-> (spotify/get-player+)
+        (.then (fn [body]
+                 (let [status (js->clj body :keywordize-keys true)]
+                   (dispatch [:spotin/set-playback-status status request-id]))))
+        (.catch (fn [e]
+                  (dispatch [:spotin/clear-playback-request-id request-id])
+                  (throw e))))))
+
 (reg-fx :play-pause
   (fn [_] (spotify/player-play-pause+)))
 
@@ -24,6 +34,15 @@
 (reg-fx :spotin/player-transfer
   (fn [device-id]
     (spotify/player-transfer+ device-id)))
+
+(reg-fx :spotin/player-volume
+  (fn [{:keys [volume-percent request-id]}]
+    (-> (spotify/player-volume+ volume-percent)
+        (.finally (fn []
+                    ;; There does not seem to be Read-your-writes consistency,
+                    ;; delay for a second before trying to fetch status update
+                    (js/setTimeout #(dispatch [:spotin/update-playback-status request-id])
+                                   1000))))))
 
 (reg-fx :playlist-share
   (fn [arg] (js/console.log "Playlist URI:" (:uri arg))))
