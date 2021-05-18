@@ -70,8 +70,15 @@
     :spotin/player-seek-backward})
 
 (def shortcuts-bar-actions
-  (->> player-actions
-       (remove (comp excluded-from-shortcuts-bar? :id))))
+  (concat [{:shortcut "x"
+            :name "menu"}]
+          (->> player-actions
+               (remove (comp excluded-from-shortcuts-bar? :id))
+               (filter :shortcut))
+          [{:shortcut "u"
+            :name "back"}
+           {:shortcut "q"
+            :name "quit"}]))
 
 (def playlist-actions
   [{:id :playlist-open

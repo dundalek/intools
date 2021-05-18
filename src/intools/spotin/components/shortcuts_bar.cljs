@@ -1,15 +1,14 @@
 (ns intools.spotin.components.shortcuts-bar
-  (:require [clojure.string :as str]
-            [ink :refer [Box Text]]))
+  (:require [ink :refer [Box Text]]))
 
 (defn shortcuts-bar [{:keys [actions]}]
-  [:> Box
+  [:> Box {:justify-content "center"}
    [:> Text
-    "x: menu, "
     (->> actions
-         (filter :shortcut)
          (map (fn [{:keys [shortcut name]}]
-                (str shortcut ": " name)))
-         (str/join ", "))
-    ", u: back"
-    ", q: quit"]])
+                [:<>
+                 [:> Text {:dim-color true} "["]
+                 [:> Text {:color "green"} shortcut]
+                 [:> Text {:dim-color true} "]"]
+                 [:> Text name]]))
+         (interpose "  "))]])
