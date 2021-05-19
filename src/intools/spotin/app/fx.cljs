@@ -84,12 +84,15 @@
 (reg-fx :spotin/load-playlist-tracks
   (fn [playlist-id]
     (-> (spotify/get-playlist-tracks+ playlist-id)
-        (.then (fn [body]
-                 (dispatch [:set-playlist-tracks playlist-id (-> body (js->clj :keywordize-keys true) :items)]))))))
+        (.then (fn [{:keys [items]}]
+                 (dispatch [:set-playlist-tracks playlist-id items]))))))
 
 (reg-fx :spotin/load-album
   (fn [album-id]
     (-> (spotify/get-album+ album-id)
         (.then (fn [body]
                  (dispatch [:spotin/set-album album-id
-                            (js->clj body :keywordize-keys true)]))))))
+                            (js->clj body :keywordize-keys true)]))))
+    (-> (spotify/get-album-tracks+ album-id)
+        (.then (fn [{:keys [items]}]
+                 (dispatch [:spotin/set-album-tracks album-id items]))))))

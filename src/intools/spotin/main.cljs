@@ -5,12 +5,11 @@
             [intools.spotin.app.fx]
             [intools.spotin.app.subs]
             [intools.spotin.components.action-menu :refer [action-menu]]
-            [intools.spotin.components.album-panel :refer [album-panel]]
             [intools.spotin.components.input-bar :refer [input-bar]]
             [intools.spotin.components.playlists-panel :refer [playlists-panel]]
             [intools.spotin.components.shortcuts-bar :refer [shortcuts-bar]]
             [intools.spotin.components.status-bar :refer [status-bar]]
-            [intools.spotin.components.tracks-panel :refer [tracks-panel]]
+            [intools.spotin.components.tracks-panel :refer [album-header album-track-item playlist-header playlist-track-item tracks-panel]]
             [intools.spotin.model.spotify :as spotify]
             [re-frame.core :as rf :refer [dispatch subscribe]]
             [react]
@@ -61,6 +60,7 @@
     :event [:spotin/player-seek-backward]}
    {:id :spotin/devices
     :name "devices"
+    :shortcut "e"
     :event [:spotin/open-devices-menu]}])
 
 (def excluded-from-shortcuts-bar?
@@ -90,12 +90,18 @@
     :name "rename"}
    {:id :playlist-edit-description
     :name "edit description"}
-   #_{:id :playlist-make-public
-      :name "make public"}
    {:id :playlist-unfollow
     :name "delete"}
+   ;; or private
+   {:id :playlist-make-public
+    :name "TBD make public"}
+   ;; Copy Spotify URI / Copy embed code
    {:id :playlist-share
-    :name "share"}
+    :name "TBD share"}
+   {:id :playlist-create
+    :name "TBD create playlist"}
+   {:id :folder-create
+    :name "TBD create folder"}
    action-separator
    {:id :spotin/open-random-playlist
     :name "open random"
@@ -115,13 +121,16 @@
 
 (def track-actions
   [{:id :open-artist
-    :name "open artist"}
+    :name "TBD open artist"}
    {:id :open-album
     :name "open album"}
+   {:name "add to queue"}
    {:id :like
-    :name "add to Liked Songs"}
+    :name "TBD add to Liked Songs"}
    {:id :add-to-library
-    :name "add to Library"}
+    :name "TBD add to playlist"}
+   {:name "TBD share"}
+   {:name "TBD remove from this playlist"}
    {:id :spotin/start-track-search
     :name "search"
     :shortcut "/"
@@ -220,17 +229,39 @@
   (when-some [err @(subscribe [:spotin/error])]
     [:f> error-alert* err]))
 
+(defn main-tracks-panel [{:keys [header context-item track-item-component]}]
+  (let [playback-item-uri @(subscribe [:spotin/playback-item-uri])
+        tracks-filtered @(subscribe [:spotin/tracks-filtered])
+        track-search-query @(subscribe [:spotin/track-search-query])]
+    [:f> tracks-panel {:focus-id "tracks-panel"
+                       :header header
+                       :tracks tracks-filtered
+                       :track-item-component track-item-component
+                       :is-searching (some? track-search-query)
+                       :playback-item-uri playback-item-uri
+                       :on-search-change #(dispatch [:spotin/set-track-search %])
+                       :on-search-cancel #(dispatch [:spotin/set-track-search nil])
+                       :on-menu (fn [item]
+                                  (let [track-actions (map #(assoc % :arg item) track-actions)
+                                        actions (concat track-actions [action-separator] player-actions)]
+                                    (dispatch [:open-action-menu actions])))
+                       :on-activate (fn [item]
+                                      (spotify/player-play+
+                                       {:context_uri (:uri context-item)
+                                        :offset {:uri (-> item :uri)}}))}]))
+                                           ;;:uris [(:uri track)]})))}]]
+
 (defn app []
   #_(hooks/use-fullscreen)
   (let [app (ink/useApp)
         size (hooks/use-window-size)
-        {:keys [playlists actions active-input-panel playlist-search-query track-search-query]} @(subscribe [:db])
+        {:keys [playlists actions active-input-panel playlist-search-query]} @(subscribe [:db])
         playlists-filtered @(subscribe [:spotin/playlists-filtered])
         actions-filtered @(subscribe [:spotin/actions-filtered])
         actions-search-query @(subscribe [:spotin/actions-search-query])
+        track-search-query @(subscribe [:spotin/track-search-query])
         current-route @(subscribe [:spotin/current-route])
         tracks-filtered @(subscribe [:spotin/tracks-filtered])
-        playback-item-uri @(subscribe [:spotin/playback-item-uri])
         playback-context-uri @(subscribe [:spotin/playback-context-uri])
         confirmation-modal-open? (some? @(subscribe [:spotin/confirmation-modal]))
         devices-menu-open? @(subscribe [:spotin/devices-menu])
@@ -325,7 +356,7 @@
                                                            {:title "Delete playlist"
                                                             :description (str "Are you sure you want to delete playlist '" (:name arg) "'?")
                                                             :on-submit #(dispatch [:playlist-unfollow (:id arg)])}])
-                             :open-album (dispatch [:spotin/open-album (-> arg :track :album :id)])
+                             :open-album (dispatch [:spotin/open-album (-> arg :album :id)])
                              (dispatch [:run-action action]))))
           :on-cancel #(dispatch [:close-action-menu])}])
       (when-not devices-menu-open?
@@ -355,28 +386,18 @@
                                               (focus-next))}]])
       (case (:name current-route)
         :playlist
-        (let [{:keys [playlist-id]} (:params current-route)]
-          ^{:key playlist-id}
-          [:f> tracks-panel {:focus-id "tracks-panel"
-                             :playlist (get playlists playlist-id)
-                             :tracks tracks-filtered
-                             :is-searching (some? track-search-query)
-                             :playback-item-uri playback-item-uri
-                             :on-search-change #(dispatch [:spotin/set-track-search %])
-                             :on-search-cancel #(dispatch [:spotin/set-track-search nil])
-                             :on-menu (fn [item]
-                                        (let [track-actions (map #(assoc % :arg item) track-actions)
-                                              actions (concat track-actions [action-separator] player-actions)]
-                                          (dispatch [:open-action-menu actions])))
-                             :on-activate (fn [item]
-                                            (let [playlist (get playlists playlist-id)]
-                                              (spotify/player-play+
-                                               {:context_uri (:uri playlist)
-                                                :offset {:uri (-> item :track :uri)}})))}])
-                                                     ;;:uris [(:uri track)]})))}]]
+        (let [context-id (-> current-route :params :playlist-id)
+              context-item (get playlists context-id)]
+          ^{:key context-id} [main-tracks-panel {:track-item-component playlist-track-item
+                                                 :context-item context-item
+                                                 :header [playlist-header {:playlist context-item
+                                                                           :tracks tracks-filtered}]}])
         :album
-        (let [{:keys [album-id]} (:params current-route)]
-          [:f> album-panel {:album @(subscribe [:spotin/album-by-id album-id])}])
+        (let [context-id (-> current-route :params :album-id)
+              context-item @(subscribe [:spotin/album-by-id context-id])]
+          ^{:key context-id} [main-tracks-panel {:track-item-component album-track-item
+                                                 :context-item context-item
+                                                 :header [album-header {:album context-item}]}])
         nil)]
      [playback-status-bar]
      [shortcuts-bar {:actions shortcuts-bar-actions}]]))

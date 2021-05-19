@@ -5,7 +5,8 @@
    :playlist-order []
    :playlist-tracks {}
    :playlist-search-query nil
-   :selected-playlist nil
+   :albums {}
+   :album-tracks {}
    :actions nil
    :actions-search-query nil
    :track-search-query nil

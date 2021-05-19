@@ -192,7 +192,7 @@
 (defn get-playlists+ []
   (cached-get+ "https://api.spotify.com/v1/me/playlists"))
 
-(defn get-all-playlists+ []
+(defn paginated-get+ [initial-url]
   (let [!items (atom nil)]
     (letfn [(fetch-page+ [url]
               (-> (get+ url)
@@ -202,13 +202,18 @@
                              (if next
                                (fetch-page+ next)
                                {:items @!items}))))))]
-      (fetch-page+ "https://api.spotify.com/v1/me/playlists?limit=50"))))
+      (fetch-page+ initial-url))))
+
+(defn get-all-playlists+ []
+  (paginated-get+ "https://api.spotify.com/v1/me/playlists?limit=50"))
 
 (defn get-playlist+ [playlist-id]
   (cached-get+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id))))
 
 (defn get-playlist-tracks+ [playlist-id]
-  (cached-get+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id) "/tracks")))
+  ;; TODO use paginated-get+
+  (-> (cached-get+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id) "/tracks?limit=100"))
+      (.then (fn [body] (js->clj body :keywordize-keys true)))))
 
 (defn playlist-change+ [playlist-id body]
   (authorized-put+ (str "https://api.spotify.com/v1/playlists/" playlist-id) body))
@@ -226,7 +231,9 @@
   (cached-get+ (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id))))
 
 (defn get-album-tracks+ [album-id]
-  (cached-get+ (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id) "/tracks")))
+  ;; TODO use paginated-get+
+  (-> (cached-get+ (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id) "/tracks?limit=50"))
+      (.then (fn [body] (js->clj body :keywordize-keys true)))))
 
 (defn get-player+ []
   (authorized-get+ "https://api.spotify.com/v1/me/player"))
@@ -234,11 +241,6 @@
 (defn get-player-devices+ []
   (-> (authorized-get+ "https://api.spotify.com/v1/me/player/devices")
       (.then #(js->clj % :keywordize-keys true))))
-
-;; TODO pagination
-;; :tracks :next
-;; (when next)
-;; concat :items
 
 (defn create-playlist+ [user-id {:keys [_name _public _collaborative _description] :as opts}]
   (authorized-post+ (str "https://api.spotify.com/v1/users/" user-id "/playlists")

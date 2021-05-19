@@ -23,8 +23,7 @@
       (js/Promise.all)
       (.then (fn [bodies]
                (let [track-uris (->> bodies
-                                     (map (fn [body]
-                                            (->> (-> body (js->clj :keywordize-keys true) :items))))
+                                     (map :items)
                                      (generate-mixed-playlist)
                                      (map #(get-in % [:track :uri])))]
                  (.then (spotify/user-id+)

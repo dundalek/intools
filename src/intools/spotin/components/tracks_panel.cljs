@@ -2,11 +2,11 @@
   (:require [clojure.string :as str]
             [ink :refer [Box Spacer Text]]
             [intools.hooks :as hooks]
-            [intools.spotin.format :refer [format-duration]]
+            [intools.spotin.format :refer [format-album-release-year format-duration]]
             [intools.views :refer [scroll-status uncontrolled-text-input use-selectable-list]]
             [react]))
 
-(defn track-item [{:keys [track]} {:keys [is-selected is-highlighted]}]
+(defn playlist-track-item [track {:keys [is-selected is-highlighted]}]
   (let [{:keys [name duration_ms album artists]} track
         highlight (or is-selected is-highlighted)]
     [:> Box
@@ -16,6 +16,17 @@
       [:> Text {:bold is-selected :color (when highlight "green") :wrap "truncate-end"} (str/join ", " (map :name artists))]]
      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
       [:> Text {:bold is-selected :color (when highlight "green") :wrap "truncate-end"} (:name album)]]
+     [:> Box {:width 6 :justify-content "flex-end"}
+      [:> Text {:bold is-selected :color (when highlight "green")} (format-duration duration_ms)]]]))
+
+(defn album-track-item [track {:keys [is-selected is-highlighted]}]
+  (let [{:keys [name duration_ms artists]} track
+        highlight (or is-selected is-highlighted)]
+    [:> Box
+     [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
+      [:> Text {:bold is-selected :color (when highlight "green") :wrap "truncate-end"} name]]
+     [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
+      [:> Text {:bold is-selected :color (when highlight "green") :wrap "truncate-end"} (str/join ", " (map :name artists))]]
      [:> Box {:width 6 :justify-content "flex-end"}
       [:> Text {:bold is-selected :color (when highlight "green")} (format-duration duration_ms)]]]))
 
@@ -37,7 +48,24 @@
         [:> Text {:dim-color true} "description "]
         [:> Text {:wrap "truncate-end"} description]])]))
 
-(defn tracks-panel [{:keys [focus-id playlist tracks is-searching playback-item-uri
+(defn album-header [{:keys [album]}]
+  (let [{:keys [name artists release_date total_tracks]} album]
+    [:> Box {:flex-direction "column"
+             :margin-bottom 1}
+     [:> Box
+      [:> Text {:dim-color true} "album "]
+      [:> Text {:wrap "truncate-end"} name]
+      [:> Spacer]
+      [:> Text {:dim-color true} "released "]
+      [:> Text (format-album-release-year release_date)]]
+     [:> Box
+      [:> Text {:dim-color true} "   by "]
+      [:> Text {:wrap "truncate-end"} (str/join ", " (map :name artists))]
+      [:> Spacer]
+      [:> Text total_tracks]
+      [:> Text {:dim-color true} " songs" #_", 3hr 42 min"]]]))
+
+(defn tracks-panel [{:keys [focus-id header tracks is-searching playback-item-uri track-item-component
                             on-activate on-menu on-search-change on-search-cancel]}]
   (let [[selected set-selected] (react/useState #{})
         on-toggle (fn [{:keys [id]}]
@@ -65,9 +93,7 @@
              :border-style "single"
              :border-color (when is-focused "green")
              :padding-x 1}
-     (when playlist
-       [playlist-header {:playlist playlist
-                         :tracks tracks}])
+     header
      (when is-searching
        [:> Box {:height 2}
         [:> Text "Search tracks: "]
@@ -79,9 +105,9 @@
               :ref box-ref}
       (->> displayed-tracks
            (map-indexed
-            (fn [idx {:keys [track] :as item}]
+            (fn [idx track]
               ^{:key idx}
-              [track-item item {:is-selected (= idx (- selected-index offset))
-                                :is-highlighted (and playback-item-uri
-                                                     (= playback-item-uri (:uri track)))}])))]
+              [track-item-component track {:is-selected (= idx (- selected-index offset))
+                                           :is-highlighted (and playback-item-uri
+                                                                (= playback-item-uri (:uri track)))}])))]
      [scroll-status selected-index tracks]]))

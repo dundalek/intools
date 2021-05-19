@@ -71,17 +71,12 @@
     {:spotin/refresh-playlists nil}))
 
 (defn set-playlists [db playlists]
-  (let [{:keys [selected-playlist]} db
-        first-playlist-id (-> playlists first :id)
-        new-db (assoc db
-                      :playlist-order (map :id playlists)
-                      :playlists (->> playlists
-                                      (reduce (fn [m {:keys [id] :as item}]
-                                                (assoc m id item))
-                                              {})))]
-    (cond-> {:db new-db}
-      #_#_(and (not selected-playlist) first-playlist-id)
-        (assoc :dispatch [:set-selected-playlist first-playlist-id]))))
+  {:db (assoc db
+              :playlist-order (map :id playlists)
+              :playlists (->> playlists
+                              (reduce (fn [m {:keys [id] :as item}]
+                                        (assoc m id item))
+                                      {})))})
 
 (reg-event-fx :set-playlists
   (fn [{db :db} [_ playlists]]
@@ -114,6 +109,10 @@
 (reg-event-db :spotin/set-album
   (fn [db [_ album-id album]]
     (assoc-in db [:albums album-id] album)))
+
+(reg-event-db :spotin/set-album-tracks
+  (fn [db [_ album-id tracks]]
+    (assoc-in db [:album-tracks album-id] tracks)))
 
 (reg-event-db :open-action-menu
   (fn [db [_ menu]]

@@ -88,18 +88,41 @@
   (fn [route]
     (-> route :params :playlist-id)))
 
-(reg-sub :spotin/current-tracks
+(reg-sub :spotin/current-album-id
+  :<- [:spotin/current-route]
+  (fn [route]
+    (-> route :params :album-id)))
+
+(reg-sub :spotin/album-tracks
+  (fn [db]
+    (:album-tracks db)))
+
+(reg-sub :spotin/current-playlist-tracks
   :<- [:spotin/playlist-tracks]
   :<- [:spotin/current-playlist-id]
   (fn [[playlist-tracks playlist-id]]
-    (get playlist-tracks playlist-id)))
+    (->> (get playlist-tracks playlist-id)
+         (map :track))))
+
+(reg-sub :spotin/current-album-tracks
+  :<- [:spotin/album-tracks]
+  :<- [:spotin/current-album-id]
+  (fn [[album-tracks album-id]]
+    (get album-tracks album-id)))
+
+(reg-sub :spotin/current-tracks
+  :<- [:spotin/current-playlist-tracks]
+  :<- [:spotin/current-album-tracks]
+  (fn [[playlist-tracks album-tracks]]
+    (or (seq playlist-tracks)
+        (seq album-tracks))))
 
 (reg-sub :spotin/tracks-filtered
   :<- [:spotin/current-tracks]
   :<- [:spotin/track-search-query]
   (fn [[tracks query]]
     (->> tracks
-         (search/filter-by query (fn [{{:keys [name album artists]} :track}]
+         (search/filter-by query (fn [{:keys [name album artists]}]
                                    (->> (concat [name (:name album)]
                                                 (map :name artists))
                                         (str/join " ")))))))
