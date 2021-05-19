@@ -23,6 +23,15 @@
   (fn [db]
     (update db :pending-requests dec)))
 
+(reg-event-db :spotin/request-failed
+  (fn [db [_ error request]]
+    (assoc db :error {:error error
+                      :request request})))
+
+(reg-event-db :spotin/clear-error
+  (fn [db]
+    (assoc db :error nil)))
+
 (reg-event-db :spotin/router-navigate
   (fn [db [_ route]]
     (router-navigate db route)))

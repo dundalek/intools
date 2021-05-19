@@ -7,6 +7,10 @@
   (fn [db _]
     db))
 
+(reg-sub :spotin/error
+  (fn [db]
+    (:error db)))
+
 (reg-sub :spotin/current-route
   (fn [db _]
     (-> db :routes peek)))

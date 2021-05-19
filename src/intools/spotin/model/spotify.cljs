@@ -24,6 +24,7 @@
 (defonce ^:dynamic *access-token* nil)
 (defonce ^:dynamic *before-request-callback* nil)
 (defonce ^:dynamic *after-request-callback* nil)
+(defonce ^:dynamic *request-error-callback* nil)
 
 (defn authorization-url []
   (str "https://accounts.spotify.com/authorize"
@@ -90,6 +91,10 @@
                   (-> (refresh-token+ refresh-token)
                       (.then #(authorized-request+ opts)))
                   (throw e))))
+      (.catch (fn [e]
+                (when *request-error-callback*
+                  (*request-error-callback* e opts))
+                (throw e)))
       (.finally #(when *after-request-callback*
                    (*after-request-callback* opts)))))
 

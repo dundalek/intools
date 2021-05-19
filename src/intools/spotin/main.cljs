@@ -192,6 +192,34 @@
                       :on-activate (fn [{:keys [id]}]
                                      (dispatch [:spotin/player-transfer id]))}]))
 
+(defn error-alert* [{:keys [request error]}]
+  (let [{:keys [method url]} request
+        focus-id "error-alert"
+        {:keys [is-focused]} (hooks/use-focus {:id focus-id
+                                               :auto-focus true})]
+    (ink/useInput
+     (fn [_input ^js key]
+       (when is-focused
+         (cond
+           (.-escape key) (dispatch [:spotin/clear-error])))))
+    [:> Box {:border-style "single"
+             :border-color (when is-focused "red")
+             :flex-direction "column"
+             :padding-x 1}
+     [:> Box
+      [:> Text {:wrap "truncate-end"} "API Error: " method " " url]]
+     [:> Box
+      (if (and (instance? js/Error error) (= (.-name error) "StatusCodeError"))
+        (let [error (-> error .-error .-error)]
+          [:> Text
+           (.-status error) " - " (.-reason error) "\n"
+           (.-message error)])
+        [:> Text (str error)])]]))
+
+(defn error-alert []
+  (when-some [err @(subscribe [:spotin/error])]
+    [:f> error-alert* err]))
+
 (defn app []
   #_(hooks/use-fullscreen)
   (let [app (ink/useApp)
@@ -207,11 +235,13 @@
         confirmation-modal-open? (some? @(subscribe [:spotin/confirmation-modal]))
         devices-menu-open? @(subscribe [:spotin/devices-menu])
         focused-component-id (cond
+                               @(subscribe [:spotin/error]) "error-alert"
                                confirmation-modal-open? "confirmation-modal"
                                (or actions devices-menu-open?) "action-menu"
                                active-input-panel "input-bar")
+        force-focus (not= focused-component-id "error-alert")
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id
-                                                                                      :force true})]
+                                                                                      :force force-focus})]
     #_(hooks/use-interval
        #(dispatch [:spotin/refresh-playback-status])
        5000)
@@ -247,6 +277,7 @@
     [:> Box {:width (:cols size)
              :height (dec (:rows size))
              :flex-direction "column"}
+     [error-alert]
      [confirmation-modal]
      (case (:type active-input-panel)
        :playlist-rename
@@ -356,6 +387,8 @@
 (defn -main []
   (set! spotify/*before-request-callback* #(dispatch [:spotin/request-started]))
   (set! spotify/*after-request-callback* #(dispatch [:spotin/request-finished]))
+  (set! spotify/*request-error-callback* (fn [error request]
+                                           (dispatch [:spotin/request-failed error request])))
   (rf/dispatch-sync [:spotin/init])
   (render))
 
