@@ -36,15 +36,29 @@
      #js [])
     size))
 
+#_(defn use-ref-size [box-ref]
+    (let [window-size (use-window-size)
+          [viewport set-viewport] (react/useState nil)]
+      (react/useEffect
+       (fn []
+         (set-viewport (js->clj (ink/measureElement (.-current box-ref))
+                                :keywordize-keys true))
+         js/undefined)
+       #js [window-size])
+      viewport))
+
 (defn use-ref-size [box-ref]
-  (let [window-size (use-window-size)
+  ;; window size value is ignored, hook is used just to re-measure when it changes
+  (let [_ (use-window-size)
         [viewport set-viewport] (react/useState nil)]
     (react/useEffect
      (fn []
-       (set-viewport (js->clj (ink/measureElement (.-current box-ref))
-                              :keywordize-keys true))
-       js/undefined)
-     #js [window-size])
+       (when (.-current box-ref)
+         (let [measured (js->clj (ink/measureElement (.-current box-ref))
+                                 :keywordize-keys true)]
+           (when (not= viewport measured)
+             (set-viewport measured))))
+       js/undefined))
     viewport))
 
 (defn use-scrollable-offset [{:keys [selected-index height]}]

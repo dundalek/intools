@@ -97,14 +97,21 @@
    :spotin/load-playlist-tracks playlist-id})
 
 (reg-event-fx :set-selected-playlist
-  (fn [cofx [_ playlist-id]]
-    (select-playlist-fx cofx playlist-id)))
+  (fn [cofx [_ {:keys [id]}]]
+    (select-playlist-fx cofx id)))
+
+(defn open-album-fx [db album-id]
+  {:db (router-navigate db {:name :album
+                            :params {:album-id album-id}})
+   :spotin/load-album album-id})
+
+(reg-event-fx :spotin/open-track-album
+  (fn [{db :db} [_ {:keys [item]}]]
+    (open-album-fx db (-> item :album :id))))
 
 (reg-event-fx :spotin/open-album
-  (fn [{db :db} [_ album-id]]
-    {:db (router-navigate db {:name :album
-                              :params {:album-id album-id}})
-     :spotin/load-album album-id}))
+  (fn [{db :db} [_ {:keys [item]}]]
+    (open-album-fx db (:id item))))
 
 (reg-event-db :spotin/set-album
   (fn [db [_ album-id album]]
@@ -113,6 +120,36 @@
 (reg-event-db :spotin/set-album-tracks
   (fn [db [_ album-id tracks]]
     (assoc-in db [:album-tracks album-id] tracks)))
+
+(defn open-artist-fx [db artist-id]
+  {:db (router-navigate db {:name :artist
+                            :params {:artist-id artist-id}})
+   :spotin/load-artist artist-id})
+
+(reg-event-fx :spotin/open-track-artist
+  (fn [{db :db} [_ {:keys [item]}]]
+    ;; TODO multiple artists, perhaps show a menu
+    (open-artist-fx db (-> item :artists first :id))))
+
+(reg-event-fx :spotin/open-artist
+  (fn [{db :db} [_ {:keys [item]}]]
+    (open-artist-fx db (:id item))))
+
+(reg-event-db :spotin/set-artist
+  (fn [db [_ artist-id artist]]
+    (assoc-in db [:artists artist-id :artist] artist)))
+
+(reg-event-db :spotin/set-artist-albums
+  (fn [db [_ artist-id albums]]
+    (assoc-in db [:artists artist-id :albums] albums)))
+
+(reg-event-db :spotin/set-artist-top-tracks
+  (fn [db [_ artist-id top-tracks]]
+    (assoc-in db [:artists artist-id :top-tracks] top-tracks)))
+
+(reg-event-db :spotin/set-artist-related-artists
+  (fn [db [_ artist-id artists]]
+    (assoc-in db [:artists artist-id :related-artists] artists)))
 
 (reg-event-db :open-action-menu
   (fn [db [_ menu]]

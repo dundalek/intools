@@ -45,6 +45,23 @@
                                            :selected-index selected-index
                                            :on-select on-select))))
 
+(defn use-scrollable-box [{:keys [items] :as opts}]
+  (let [{:keys [selected-index is-focused]} (use-selectable-list opts)
+        box-ref (react/useRef)
+        viewport (hooks/use-ref-size box-ref)
+        viewport-height (if (pos? (:height viewport))
+                          (:height viewport)
+                          (count items))
+        offset (hooks/use-scrollable-offset {:selected-index selected-index
+                                             :height         viewport-height})
+        displayed-selected-index (- selected-index offset)
+        displayed-items (->> items (drop offset) (take viewport-height))]
+    {:box-ref box-ref
+     :is-focused is-focused
+     :selected-index selected-index
+     :displayed-selected-index displayed-selected-index
+     :displayed-items displayed-items}))
+
 (defn selectable-list [{:keys [items item-component] :as props}]
   (let [{:keys [selected-index]} (use-selectable-list (dissoc props :item-component))]
     [:> Box {:flex-direction "column"}
@@ -84,4 +101,7 @@
   ;; It would be nice to render this over the bottom border
   [:> Box {:height 1}
    [:> Spacer]
-   [:> Text {:dim-color true} (inc index) " of " (count items)]])
+   [:> Text {:dim-color true}
+    (when (pos? (count items))
+      [:> Text (inc index) " of "])
+    (count items)]])

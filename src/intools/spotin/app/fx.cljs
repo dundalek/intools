@@ -31,6 +31,23 @@
 (reg-fx :playlist-play
   (fn [arg] (spotify/player-play+ {:context_uri (:uri arg)})))
 
+(reg-fx :album-play
+  (fn [{:keys [item]}] (spotify/player-play+ {:context_uri (:uri item)})))
+
+(reg-fx :track-play
+  (fn [{:keys [item items context]}]
+    (if (= (:type context) "artist")
+      ;; playing top tracks from artist context is not allowed,
+      ;; so we add the track uris directly
+      (let [position (->> items
+                          (keep-indexed #(when (= (:id item) (:id %2)) %1))
+                          (first))
+            opts {:uris (into [] (map :uri items))
+                  :offset {:position position}}]
+        (spotify/player-play+ opts))
+      (spotify/player-play+ {:context_uri (:uri context)
+                             :offset {:uri (:uri item)}}))))
+
 (reg-fx :spotin/player-transfer
   (fn [device-id]
     (spotify/player-transfer+ device-id)))
@@ -96,3 +113,19 @@
     (-> (spotify/get-album-tracks+ album-id)
         (.then (fn [{:keys [items]}]
                  (dispatch [:spotin/set-album-tracks album-id items]))))))
+
+(reg-fx :spotin/load-artist
+  (fn [artist-id]
+    (-> (spotify/get-artist+ artist-id)
+        (.then (fn [body]
+                 (dispatch [:spotin/set-artist artist-id
+                            (js->clj body :keywordize-keys true)]))))
+    (-> (spotify/get-artist-albums+ artist-id)
+        (.then (fn [{:keys [items]}]
+                 (dispatch [:spotin/set-artist-albums artist-id items]))))
+    (-> (spotify/get-artist-top-tracks+ artist-id)
+        (.then (fn [{:keys [tracks]}]
+                 (dispatch [:spotin/set-artist-top-tracks artist-id tracks]))))
+    (-> (spotify/get-artist-related-artists+ artist-id)
+        (.then (fn [{:keys [artists]}]
+                 (dispatch [:spotin/set-artist-related-artists artist-id artists]))))))

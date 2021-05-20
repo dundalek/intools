@@ -65,6 +65,10 @@
              :border-style "single"
              :border-color (when is-focused "green")
              :flex-grow 1}
+     [:> Box {:height 1}
+              ;;:justify-content "center"}
+      [:> Text {:dim-color true} "Playlists"]]
+
      (when is-searching
        [:> Box {:flex-direction "column"
                 :height 3}

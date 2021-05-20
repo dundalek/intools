@@ -1,5 +1,6 @@
 (ns intools.spotin.main
-  (:require [ink :refer [Box Text]]
+  (:require [clojure.string :as str]
+            [ink :refer [Box Spacer Text]]
             [intools.hooks :as hooks]
             [intools.spotin.app.events]
             [intools.spotin.app.fx]
@@ -10,7 +11,9 @@
             [intools.spotin.components.shortcuts-bar :refer [shortcuts-bar]]
             [intools.spotin.components.status-bar :refer [status-bar]]
             [intools.spotin.components.tracks-panel :refer [album-header album-track-item playlist-header playlist-track-item tracks-panel]]
+            [intools.spotin.format :refer [format-album-release-year format-duration]]
             [intools.spotin.model.spotify :as spotify]
+            [intools.views :refer [scroll-status use-scrollable-box use-selectable-list]]
             [re-frame.core :as rf :refer [dispatch subscribe]]
             [react]
             [reagent.core :as r]))
@@ -72,6 +75,8 @@
 (def shortcuts-bar-actions
   (concat [{:shortcut "x"
             :name "menu"}]
+          [{:shortcut "/"
+            :name "search"}]
           (->> player-actions
                (remove (comp excluded-from-shortcuts-bar? :id))
                (filter :shortcut))
@@ -81,10 +86,7 @@
             :name "quit"}]))
 
 (def playlist-actions
-  [{:id :playlist-open
-    :name "open"
-    :shortcut "⏎"}
-   {:id :playlist-play
+  [{:id :playlist-play
     :name "play"}
    {:id :playlist-rename
     :name "rename"}
@@ -93,15 +95,19 @@
    {:id :playlist-unfollow
     :name "delete"}
    ;; or private
-   {:id :playlist-make-public
-    :name "TBD make public"}
-   ;; Copy Spotify URI / Copy embed code
-   {:id :playlist-share
-    :name "TBD share"}
-   {:id :playlist-create
-    :name "TBD create playlist"}
-   {:id :folder-create
-    :name "TBD create folder"}
+   ;;{:id :playlist-make-public
+   ;; :name "TBD make public"}
+   ;;;; Copy Spotify URI / Copy embed code
+   ;;{:id :playlist-share
+   ;; :name "TBD share"}
+   {:id :playlist-open
+    :name "open"
+    :shortcut "⏎"
+    :event [:set-selected-playlist]}
+   ;;{:id :playlist-create
+   ;; :name "TBD create playlist"}
+   ;;{:id :folder-create
+   ;; :name "TBD create folder"}
    action-separator
    {:id :spotin/open-random-playlist
     :name "open random"
@@ -120,21 +126,47 @@
     :name "mix"}])
 
 (def track-actions
-  [{:id :open-artist
-    :name "TBD open artist"}
-   {:id :open-album
-    :name "open album"}
-   {:name "add to queue"}
-   {:id :like
-    :name "TBD add to Liked Songs"}
-   {:id :add-to-library
-    :name "TBD add to playlist"}
-   {:name "TBD share"}
-   {:name "TBD remove from this playlist"}
-   {:id :spotin/start-track-search
-    :name "search"
-    :shortcut "/"
-    :event [:spotin/set-track-search ""]}])
+  [{:name "open artist"
+    :event [:spotin/open-track-artist]}
+   {:name "open album"
+    :event [:spotin/open-track-album]}
+   ;; - TBD Go to song radio
+   ;;{:name "TBD add to queue"}
+   ;;{:id :like
+   ;; :name "TBD add to Liked Songs"}
+   ;;{:id :add-to-library
+   ;; :name "TBD add to playlist"}
+   ;;{:name "TBD share"}
+     ;;{:name "TBD remove from this playlist"}
+   {:name "play"
+    :shortcut "⏎"
+    :event [:spotin/dispatch-fx :track-play]}])
+
+(def tracks-actions
+  (conj track-actions
+        {:id :spotin/start-track-search
+         :name "search"
+         :shortcut "/"
+         :event [:spotin/set-track-search ""]}))
+
+(def album-actions
+  [{:name "play"
+    :event [:spotin/dispatch-fx :album-play]}
+   {:name "open"
+    :shortcut "⏎"
+    :event [:spotin/open-album]}])
+   ; {:name "TBD go to album radio"}
+   ; {:name "TBD Save to Your Library"}
+   ; {:name "TBD Add to playlist"}
+   ; {:name "TBD Share"}])
+
+(def artist-actions
+  [{:name "open"
+    :shortcut "⏎"
+    :event [:spotin/open-artist]}])
+   ;;{:name "TBD Follow"}])
+   ;;{:name "TBD Go to artist radio"}
+   ;;{:name "TBD Share"}])
 
 (defn library-panel []
   (let [{:keys [is-focused]} (hooks/use-focus)]
@@ -242,14 +274,169 @@
                        :on-search-change #(dispatch [:spotin/set-track-search %])
                        :on-search-cancel #(dispatch [:spotin/set-track-search nil])
                        :on-menu (fn [item]
-                                  (let [track-actions (map #(assoc % :arg item) track-actions)
-                                        actions (concat track-actions [action-separator] player-actions)]
+                                  (let [tracks-actions (map #(assoc % :arg {:item item
+                                                                            :context context-item})
+                                                            tracks-actions)
+                                        actions (concat tracks-actions [action-separator] player-actions)]
                                     (dispatch [:open-action-menu actions])))
                        :on-activate (fn [item]
-                                      (spotify/player-play+
-                                       {:context_uri (:uri context-item)
-                                        :offset {:uri (-> item :uri)}}))}]))
-                                           ;;:uris [(:uri track)]})))}]]
+                                      (dispatch [:spotin/dispatch-fx :track-play
+                                                 {:context context-item
+                                                  :item item}]))}]))
+
+(defn artist-item [{:keys [name followers]} {:keys [is-selected]}]
+  [:> Box
+   [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
+    [:> Text {:bold is-selected :color (when is-selected "green") :wrap "truncate-end"} name]]
+   [:> Box
+    [:> Text {:bold is-selected :color (when is-selected "green")} (:total followers)]]])
+
+(defn album-item [{:keys [name release_date total_tracks]} {:keys [is-selected]}]
+  [:> Box
+   [:> Box
+    [:> Text (cond-> {:bold is-selected :color (when is-selected "green")}
+               (not is-selected) (assoc :dim-color true))
+     (format-album-release-year release_date)]]
+   [:> Box {:flex-basis 0 :flex-grow 1 :padding-x 1 :justify-content "flex-start"}
+    [:> Text {:bold is-selected :color (when is-selected "green") :wrap "truncate-end"}
+     name]]
+   [:> Box
+    [:> Text {:bold is-selected :color (when is-selected "green")}
+     total_tracks]]])
+
+(defn artist-track-item [track {:keys [is-selected]}]
+  (let [{:keys [name duration_ms popularity]} track]
+    [:> Box
+     [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
+      [:> Text {:bold is-selected :color (when is-selected "green") :wrap "truncate-end"} name]]
+     [:> Box
+      [:> Text {:bold is-selected :color (when is-selected "green")} popularity " "]]
+     [:> Box {:width 6 :justify-content "flex-end"}
+      [:> Text {:bold is-selected :color (when is-selected "green")} (format-duration duration_ms)]]]))
+
+(defn artist-header [{:keys [name genres] :as artist}]
+  (let [follower-count (-> artist :followers :total)]
+    [:> Box {:flex-direction "column"
+             :padding-x 1
+             :padding-top 1}
+     [:> Box
+      [:> Text {:dim-color true} "artist "]
+      [:> Text {:wrap "truncate-end"} name]
+      [:> Spacer]
+      [:> Text follower-count]
+      [:> Text {:dim-color true} " followers"]]
+     [:> Box
+      [:> Text {:dim-color true} "genres "]
+      [:> Text {:wrap "truncate-end"} (str/join ", " genres)]]]))
+
+(defn artist-sub-panel [{:keys [focus-id header items item-component on-menu on-activate]}]
+  (let [{:keys [box-ref is-focused selected-index displayed-selected-index displayed-items]}
+        (use-scrollable-box {:focus-id focus-id
+                             :items items
+                             :on-menu on-menu
+                             :on-activate on-activate
+                             :auto-focus true})]
+    (ink/useInput
+     (fn [input _key]
+       (when is-focused
+         (case input
+           "x" (when on-menu (on-menu (nth items selected-index)))
+           nil))))
+    [:> Box {:flex-direction "column"
+             :width "50%"
+             :border-style "single"
+             :border-color (when is-focused "green")
+             :flew-grow 1
+             :padding-x 1}
+     header
+     [:> Box {:flex-direction "column"
+              :flew-grow 1
+              :ref box-ref}
+      (->> displayed-items
+           (map-indexed
+            (fn [idx {:keys [id] :as item}]
+              (let [is-selected (and is-focused (= idx displayed-selected-index))]
+                ^{:key id} [item-component item {:is-selected is-selected}]))))]
+     [scroll-status selected-index items]]))
+
+(defn dedupe-releases [albums]
+  ;; When there are multiple releases of the same album, Spotify seems to show the earliest.
+  ;; Since the albums are by default sorted by latest first, we pick the last one in each group.
+  (->> albums
+       (group-by :name)
+       (map (comp last val))
+       (sort-by :release_date #(compare %2 %1))))
+
+(defn artist-panel [{:keys [artist]}]
+  (let [{:keys [artist albums top-tracks related-artists]} artist
+        groups (group-by :album_group albums)]
+    [:> Box {:flex-direction "column"
+             :flex-grow 1}
+     [artist-header artist]
+     [:> Box {:height "50%"}
+      [:f> artist-sub-panel {:focus-id "artist-top-tracks"
+                             :header [:> Box {:height 1 :justify-content "space-between"}
+                                      [:> Text {:dim-color true} "Top Tracks"]
+                                      [:> Text {:dim-color true} "popularity time"]]
+                             :items top-tracks
+                             :item-component artist-track-item
+                             :on-menu (fn [item]
+                                        (let [tracks-actions (map #(assoc % :arg {:item item
+                                                                                  :items top-tracks
+                                                                                  :context artist})
+                                                                  tracks-actions)
+                                              actions (concat tracks-actions [action-separator] player-actions)]
+                                          (dispatch [:open-action-menu actions])))
+                             :on-activate (fn [item]
+                                            (dispatch [:spotin/dispatch-fx :track-play {:item item
+                                                                                        :items top-tracks
+                                                                                        :context artist}]))}]
+      [:f> artist-sub-panel {:focus-id "artist-singles"
+                             :header [:> Box {:height 1 :justify-content "space-between"}
+                                      [:> Text {:dim-color true} "Singles and EPs"]
+                                      [:> Text {:dim-color true} "songs"]]
+                             :items (dedupe-releases (get groups "single"))
+                             :item-component album-item
+                             :on-menu (fn [item]
+                                        (let [album-actions (map #(assoc % :arg {:item item
+                                                                                 :context artist})
+                                                                 album-actions)
+                                              actions (concat album-actions [action-separator] player-actions)]
+                                          (dispatch [:open-action-menu actions])))
+                             :on-activate (fn [item]
+                                            (dispatch [:spotin/open-album {:item item
+                                                                           :context artist}]))}]]
+     [:> Box {:height "50%"}
+      [:f> artist-sub-panel {:focus-id "artist-albums"
+                             :header [:> Box {:height 1 :justify-content "space-between"}
+                                      [:> Text {:dim-color true} "Albums"]
+                                      [:> Text {:dim-color true} "songs"]]
+                             :items (dedupe-releases (get groups "album"))
+                             :item-component album-item
+                             :on-menu (fn [item]
+                                        (let [album-actions (map #(assoc % :arg {:item item
+                                                                                 :context artist})
+                                                                 album-actions)
+                                              actions (concat album-actions [action-separator] player-actions)]
+                                          (dispatch [:open-action-menu actions])))
+                             :on-activate (fn [item]
+                                            (dispatch [:spotin/open-album {:item item
+                                                                           :context artist}]))}]
+      [:f> artist-sub-panel {:focus-id "artist-related-artists"
+                             :header [:> Box {:height 1 :justify-content "space-between"}
+                                      [:> Text {:dim-color true} "Related Artists"]
+                                      [:> Text {:dim-color true} "followers"]]
+                             :items related-artists
+                             :item-component artist-item
+                             :on-menu (fn [item]
+                                        (let [artist-actions (map #(assoc % :arg {:item item
+                                                                                  :context artist})
+                                                                  artist-actions)
+                                              actions (concat artist-actions [action-separator] player-actions)]
+                                          (dispatch [:open-action-menu actions])))
+                             :on-activate (fn [item]
+                                            (dispatch [:spotin/open-artist {:item item
+                                                                            :context artist}]))}]]]))
 
 (defn app []
   #_(hooks/use-fullscreen)
@@ -289,13 +476,13 @@
             ; "x" (dispatch (if actions
                             ; [:close-action-menu]
                             ; [:open-action-menu player-actions]))
-           (when-some [{:keys [event shortcut] :as action} (->> (case active-focus-id
-                                                                  "action-menu" actions
-                                                                  "playlists-panel" (concat playlist-actions player-actions)
-                                                                  "tracks-panel" (concat track-actions player-actions)
-                                                                  player-actions)
-                                                                (some (fn [{:keys [shortcut] :as action}]
-                                                                        (when (= shortcut input) action))))]
+           (when-some [{:keys [event shortcut arg] :as action} (->> (case active-focus-id
+                                                                      "action-menu" actions
+                                                                      "playlists-panel" (concat playlist-actions player-actions)
+                                                                      "tracks-panel" (concat tracks-actions player-actions)
+                                                                      player-actions)
+                                                                    (some (fn [{:keys [shortcut] :as action}]
+                                                                            (when (= shortcut input) action))))]
              (let [actions-focused? (= active-focus-id "action-menu")
                    search-action? (and actions-focused? (= shortcut "/"))]
                (when (and actions-focused? (not search-action?))
@@ -303,7 +490,7 @@
                (cond
                  ;; override / to search in action menu - this is a bit hacky without event propagation
                  search-action? (dispatch [:spotin/set-actions-search ""])
-                 event (dispatch event)
+                 event (dispatch (conj event arg))
                  :else (dispatch [:run-action action]))))))))
     [:> Box {:width (:cols size)
              :height (dec (:rows size))
@@ -347,16 +534,14 @@
           :on-activate (fn [{:keys [id arg event] :as action}]
                          (dispatch [:close-action-menu])
                          (if event
-                           (dispatch event)
+                           (dispatch (conj event arg))
                            (case id
-                             :playlist-open (dispatch [:set-selected-playlist (:id arg)])
                              :playlist-rename (dispatch [:playlist-rename arg])
                              :playlist-edit-description (dispatch [:playlist-edit-description arg])
                              :playlist-unfollow (dispatch [:spotin/open-confirmation-modal
                                                            {:title "Delete playlist"
                                                             :description (str "Are you sure you want to delete playlist '" (:name arg) "'?")
                                                             :on-submit #(dispatch [:playlist-unfollow (:id arg)])}])
-                             :open-album (dispatch [:spotin/open-album (-> arg :album :id)])
                              (dispatch [:run-action action]))))
           :on-cancel #(dispatch [:close-action-menu])}])
       (when-not devices-menu-open?
@@ -380,10 +565,10 @@
                                                                 [action-separator]
                                                                 player-actions)]
                                             (dispatch [:open-action-menu actions])))
-                               :on-activate (fn [{:keys [id]}]
-                                              (dispatch [:set-selected-playlist id])
+                               :on-activate (fn [playlist]
+                                              (dispatch [:set-selected-playlist playlist]))}]])
                                               ;; Try to focus the tracks panel after playlist selected, it is a bit brittle
-                                              (focus-next))}]])
+                                              ;;(focus-next))}]])
       (case (:name current-route)
         :playlist
         (let [context-id (-> current-route :params :playlist-id)
@@ -398,6 +583,10 @@
           ^{:key context-id} [main-tracks-panel {:track-item-component album-track-item
                                                  :context-item context-item
                                                  :header [album-header {:album context-item}]}])
+
+        :artist
+        [artist-panel {:artist @(subscribe [:spotin/artist-by-id (-> current-route :params :artist-id)])}]
+
         nil)]
      [playback-status-bar]
      [shortcuts-bar {:actions shortcuts-bar-actions}]]))

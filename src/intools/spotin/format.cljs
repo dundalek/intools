@@ -9,4 +9,4 @@
 
 (defn format-album-release-year [release-date]
   ;; release-date is a YYYY-MM-DD string, pick the year and discard the rest
-  (str/replace release-date #"-.*$" ""))
+  (some-> release-date (str/replace #"-.*$" "")))
