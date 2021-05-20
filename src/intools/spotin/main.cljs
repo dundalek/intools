@@ -21,7 +21,7 @@
 (defonce !app (atom nil))
 (declare render)
 
-(def sidepanel-width "20%")
+(def sidepanel-width "22%")
 
 (def action-separator
   {:name ""})
@@ -45,7 +45,8 @@
    {:id :repeat
     :name "repeat"
     :event [:spotin/dispatch-fx :repeat]}
-   {:name "currently playing"
+   {:id :spotin/open-currently-playing
+    :name "currently playing"
     :shortcut "."
     :event [:spotin/open-currently-playing]}
    {:id :spotin/player-volume-up
@@ -73,7 +74,8 @@
   #{:spotin/player-volume-up
     :spotin/player-volume-down
     :spotin/player-seek-forward
-    :spotin/player-seek-backward})
+    :spotin/player-seek-backward
+    :spotin/open-currently-playing})
 
 (def shortcuts-bar-actions
   (concat [{:shortcut "x"
@@ -532,6 +534,7 @@
         [:f> action-menu
          {:actions actions-filtered
           :is-searching (some? actions-search-query)
+          :width 21
           :on-search-change #(dispatch [:spotin/set-actions-search %])
           :on-search-cancel #(dispatch [:spotin/set-actions-search nil])
           :on-activate (fn [{:keys [id arg event] :as action}]

@@ -12,8 +12,7 @@
 
 (defn action-menu [{:keys [actions is-searching item-component width
                            on-activate on-cancel on-search-change on-search-cancel]
-                    :or {item-component action-item
-                         width 20}}]
+                    :or {item-component action-item}}]
   (let [[selected-index on-select] (react/useState 0)
         {:keys [is-focused]} (use-selectable-list-controlled {:focus-id "action-menu"
                                                               :auto-focus true

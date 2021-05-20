@@ -8,41 +8,44 @@
 
 (defn playlist-track-item [track {:keys [is-selected is-highlighted]}]
   (let [{:keys [name duration_ms album artists]} track
-        highlight (or is-selected is-highlighted)]
+        color (when (or is-selected is-highlighted) "green")
+        text-style {:bold is-selected :color color}]
     [:> Box
      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
-      [:> Text {:bold is-selected :color (when highlight "green") :wrap "truncate-end"} name]]
+      [:> Text (assoc text-style :wrap "truncate-end") name]]
      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
-      [:> Text {:bold is-selected :color (when highlight "green") :wrap "truncate-end"} (str/join ", " (map :name artists))]]
+      [:> Text (assoc text-style :wrap "truncate-end") (str/join ", " (map :name artists))]]
      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
-      [:> Text {:bold is-selected :color (when highlight "green") :wrap "truncate-end"} (:name album)]]
+      [:> Text (assoc text-style :wrap "truncate-end") (:name album)]]
      [:> Box {:width 6 :justify-content "flex-end"}
-      [:> Text {:bold is-selected :color (when highlight "green")} (format-duration duration_ms)]]]))
+      [:> Text text-style (format-duration duration_ms)]]]))
 
 (defn album-track-item [track {:keys [is-selected is-highlighted]}]
   (let [{:keys [name duration_ms artists]} track
-        highlight (or is-selected is-highlighted)]
+        color (when (or is-selected is-highlighted) "green")
+        text-style {:bold is-selected :color color}]
     [:> Box
      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
-      [:> Text {:bold is-selected :color (when highlight "green") :wrap "truncate-end"} name]]
+      [:> Text (assoc text-style :wrap "truncate-end") name]]
      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
-      [:> Text {:bold is-selected :color (when highlight "green") :wrap "truncate-end"} (str/join ", " (map :name artists))]]
-     [:> Box {:width 6 :justify-content "flex-end"}
-      [:> Text {:bold is-selected :color (when highlight "green")} (format-duration duration_ms)]]]))
+      [:> Text (assoc text-style :wrap "truncate-end") (str/join ", " (map :name artists))]]
+     [:> Box {:min-width 6 :justify-content "flex-end"}
+      [:> Text text-style (format-duration duration_ms)]]]))
 
 (defn playlist-header [{:keys [playlist tracks]}]
   (let [{:keys [name description owner]} playlist]
     [:> Box {:flex-direction "column"
              :margin-bottom 1}
      [:> Box
-      [:> Text {:dim-color true} "playlist    "]
-      [:> Text {:wrap "truncate-end"} name]
-      [:> Spacer]
-      [:> Text {:dim-color true} " by "]
-      [:> Text {:wrap "truncate-end"} (:display_name owner)]
-      [:> Spacer]
-      [:> Text (count tracks)]
-      [:> Text {:dim-color true} " songs" #_", 3hr 42 min"]]
+      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
+       [:> Text {:dim-color true} "playlist    "]
+       [:> Text {:wrap "truncate-end"} name]]
+      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
+       [:> Text {:dim-color true} " by "]
+       [:> Text {:wrap "truncate-end"} (:display_name owner)]]
+      [:> Box
+       [:> Text (count tracks)]
+       [:> Text {:dim-color true} " songs" #_", 3hr 42 min"]]]
      (when-not (str/blank? description)
        [:> Box
         [:> Text {:dim-color true} "description "]
@@ -53,17 +56,20 @@
     [:> Box {:flex-direction "column"
              :margin-bottom 1}
      [:> Box
-      [:> Text {:dim-color true} "album "]
-      [:> Text {:wrap "truncate-end"} name]
-      [:> Spacer]
-      [:> Text {:dim-color true} "released "]
-      [:> Text (format-album-release-year release_date)]]
+      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
+       [:> Text {:dim-color true} "album "]
+       [:> Text {:wrap "truncate-end"} name]]
+      [:> Box
+       [:> Text {:dim-color true} "released "]
+       [:> Text (format-album-release-year release_date)]]]
      [:> Box
-      [:> Text {:dim-color true} "   by "]
-      [:> Text {:wrap "truncate-end"} (str/join ", " (map :name artists))]
-      [:> Spacer]
-      [:> Text total_tracks]
-      [:> Text {:dim-color true} " songs" #_", 3hr 42 min"]]]))
+      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
+       [:> Text {:dim-color true} "   by "]
+       [:> Text {:wrap "truncate-end"} (str/join ", " (map :name artists))]]
+      [:> Box
+       [:> Text {:dim-color true} "songs " #_", 3hr 42 min"]]
+      [:> Box {:min-width 4 :justify-content "flex-end"}
+       [:> Text total_tracks]]]]))
 
 (defn tracks-panel [{:keys [focus-id header tracks is-searching playback-item-uri track-item-component
                             on-activate on-menu on-search-change on-search-cancel]}]
