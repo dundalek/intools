@@ -45,6 +45,9 @@
    {:id :repeat
     :name "repeat"
     :event [:spotin/dispatch-fx :repeat]}
+   {:name "currently playing"
+    :shortcut "."
+    :event [:spotin/open-currently-playing]}
    {:id :spotin/player-volume-up
     :name "volume up 10%"
     :shortcut "+"

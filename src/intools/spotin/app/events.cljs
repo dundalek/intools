@@ -1,5 +1,6 @@
 (ns intools.spotin.app.events
   (:require [intools.spotin.app.db :as db]
+            [intools.spotin.model.spotify :as spotify]
             [re-frame.core :refer [reg-event-db reg-event-fx]]))
 
 (defn router-navigate [db route]
@@ -91,14 +92,14 @@
   (fn [db [_ playlist-id tracks]]
     (assoc-in db [:playlist-tracks playlist-id] tracks)))
 
-(defn select-playlist-fx [{db :db} playlist-id]
+(defn select-playlist-fx [db playlist-id]
   {:db (router-navigate db {:name :playlist
                             :params {:playlist-id playlist-id}})
    :spotin/load-playlist-tracks playlist-id})
 
 (reg-event-fx :set-selected-playlist
-  (fn [cofx [_ {:keys [id]}]]
-    (select-playlist-fx cofx id)))
+  (fn [{db :db} [_ {:keys [id]}]]
+    (select-playlist-fx db id)))
 
 (defn open-album-fx [db album-id]
   {:db (router-navigate db {:name :album
@@ -151,6 +152,19 @@
   (fn [db [_ artist-id artists]]
     (assoc-in db [:artists artist-id :related-artists] artists)))
 
+(reg-event-fx :spotin/open-currently-playing
+  (fn [{db :db}]
+    ;; TODO show error alert for no context or unexpected context type
+    (if-some [{:keys [type uri]} (-> db :playback-status :context)]
+      (let [id (spotify/uri->id uri)]
+        (case type
+          "playlist" (select-playlist-fx db id)
+          "album" (open-album-fx db id)
+          "artist" (open-artist-fx db id)))
+      ;; no context specified, try show song's album
+      (when-some [album-id (-> db :playback-status :item :album :id)]
+        (open-album-fx db album-id)))))
+
 (reg-event-db :open-action-menu
   (fn [db [_ menu]]
     (assoc db :actions menu)))
@@ -192,9 +206,9 @@
     {id arg}))
 
 (reg-event-fx :spotin/open-random-playlist
-  (fn [{db :db :as cofx} _]
+  (fn [{db :db} _]
     (let [playlist-id (rand-nth (:playlist-order db))]
-      (select-playlist-fx cofx playlist-id))))
+      (select-playlist-fx db playlist-id))))
 
 (defn set-playlist-search [db query]
   (assoc db :playlist-search-query query))

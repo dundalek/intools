@@ -26,6 +26,10 @@
 (defonce ^:dynamic *after-request-callback* nil)
 (defonce ^:dynamic *request-error-callback* nil)
 
+(defn uri->id [uri]
+  (-> (str/split uri #":")
+      (nth 2)))
+
 (defn authorization-url []
   (str "https://accounts.spotify.com/authorize"
        "?response_type=code"
