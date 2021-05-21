@@ -367,14 +367,14 @@
            "x" (when on-menu (on-menu (nth items selected-index)))
            nil))))
     [:> Box {:flex-direction "column"
-             :width "50%"
              :border-style "single"
              :border-color (when is-focused "green")
-             :flew-grow 1
+             :flex-basis 1
+             :flex-grow 1
              :padding-x 1}
      header
      [:> Box {:flex-direction "column"
-              :flew-grow 1
+              :flex-grow 1
               :ref box-ref}
       (->> displayed-items
            (map-indexed
@@ -397,7 +397,8 @@
     [:> Box {:flex-direction "column"
              :flex-grow 1}
      [artist-header artist]
-     [:> Box {:height "50%"}
+     [:> Box {:flex-basis 1
+              :flex-grow 1}
       [:f> artist-sub-panel {:focus-id "artist-top-tracks"
                              :header [:> Box {:height 1 :justify-content "space-between"}
                                       [:> Text {:dim-color true} "Top Tracks"]
@@ -430,7 +431,8 @@
                              :on-activate (fn [item]
                                             (dispatch [:spotin/open-album {:item item
                                                                            :context artist}]))}]]
-     [:> Box {:height "50%"}
+     [:> Box {:flex-basis 1
+              :flex-grow 1}
       [:f> artist-sub-panel {:focus-id "artist-albums"
                              :header [:> Box {:height 1 :justify-content "space-between"}
                                       [:> Text {:dim-color true} "Albums"]

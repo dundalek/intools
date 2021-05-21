@@ -37,7 +37,7 @@
 
         box-ref (react/useRef)
         viewport (hooks/use-ref-size box-ref)
-        viewport-height (or (:height viewport) (count playlists))
+        viewport-height (or (:height viewport) 0)
         offset (hooks/use-scrollable-offset {:selected-index selected-index
                                              :height viewport-height})
         displayed-items (->> playlists (drop offset) (take viewport-height))]
@@ -83,7 +83,7 @@
       (->> displayed-items
            (map-indexed
             (fn [idx {:keys [id uri] :as item}]
-              ^{:key idx}
+              ^{:key id}
               [playlist-item item {:is-selected (= idx (- selected-index offset))
                                    :is-active (contains? selected id)
                                    :is-highlighted (and playback-context-uri

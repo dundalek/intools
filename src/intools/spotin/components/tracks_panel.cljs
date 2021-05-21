@@ -114,8 +114,8 @@
               :ref box-ref}
       (->> displayed-items
            (map-indexed
-            (fn [idx track]
-              ^{:key idx}
+            (fn [idx {:keys [id] :as track}]
+              ^{:key id}
               [track-item-component track {:is-selected (= idx displayed-selected-index)
                                            :is-highlighted (and playback-item-uri
                                                                 (= playback-item-uri (:uri track)))}])))]

@@ -53,9 +53,7 @@
                                      :on-select on-select))
         box-ref (react/useRef)
         viewport (hooks/use-ref-size box-ref)
-        viewport-height (if (pos? (:height viewport))
-                          (:height viewport)
-                          (count items))
+        viewport-height (or (:height viewport) 0)
         offset (hooks/use-scrollable-offset {:selected-index selected-index
                                              :height         viewport-height})
         displayed-selected-index (- selected-index offset)
