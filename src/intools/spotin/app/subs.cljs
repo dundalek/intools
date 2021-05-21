@@ -1,6 +1,7 @@
 (ns intools.spotin.app.subs
   (:require [clojure.string :as str]
             [intools.search :as search]
+            [intools.spotin.app.core :as app]
             [re-frame.core :refer [reg-sub]]))
 
 (reg-sub :db
@@ -13,7 +14,7 @@
 
 (reg-sub :spotin/current-route
   (fn [db _]
-    (-> db :routes peek)))
+    (app/current-route db)))
 
 (reg-sub :spotin/pending-requests
   (fn [db]

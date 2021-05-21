@@ -1,14 +1,8 @@
 (ns intools.spotin.app.events
-  (:require [intools.spotin.app.db :as db]
+  (:require [intools.spotin.app.core :as app]
+            [intools.spotin.app.db :as db]
             [intools.spotin.model.spotify :as spotify]
             [re-frame.core :refer [reg-event-db reg-event-fx]]))
-
-(defn router-navigate [db route]
-  (update db :routes conj route))
-
-(defn router-back [db]
-  (cond-> db
-    (seq (:routes db)) (update :routes pop)))
 
 (reg-event-fx :spotin/init
   (fn [_ _]
@@ -35,11 +29,11 @@
 
 (reg-event-db :spotin/router-navigate
   (fn [db [_ route]]
-    (router-navigate db route)))
+    (app/router-navigate db route)))
 
 (reg-event-db :spotin/router-back
   (fn [db _]
-    (router-back db)))
+    (app/router-back db)))
 
 (defn- expected-request? [{:keys [playback-request-id] :as _db} request-id]
   (or (not playback-request-id)
@@ -93,8 +87,8 @@
     (assoc-in db [:playlist-tracks playlist-id] tracks)))
 
 (defn select-playlist-fx [db playlist-id]
-  {:db (router-navigate db {:name :playlist
-                            :params {:playlist-id playlist-id}})
+  {:db (app/router-navigate db {:name :playlist
+                                :params {:playlist-id playlist-id}})
    :spotin/load-playlist-tracks playlist-id})
 
 (reg-event-fx :select-playlist
@@ -102,8 +96,8 @@
     (select-playlist-fx db id)))
 
 (defn open-album-fx [db album-id]
-  {:db (router-navigate db {:name :album
-                            :params {:album-id album-id}})
+  {:db (app/router-navigate db {:name :album
+                                :params {:album-id album-id}})
    :spotin/load-album album-id})
 
 (reg-event-fx :spotin/open-track-album
@@ -123,8 +117,8 @@
     (assoc-in db [:album-tracks album-id] tracks)))
 
 (defn open-artist-fx [db artist-id]
-  {:db (router-navigate db {:name :artist
-                            :params {:artist-id artist-id}})
+  {:db (app/router-navigate db {:name :artist
+                                :params {:artist-id artist-id}})
    :spotin/load-artist artist-id})
 
 (reg-event-fx :spotin/open-track-artist
