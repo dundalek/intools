@@ -40,15 +40,17 @@
       [:> Text
        (if pending-requests [:> Spinner] " ")
        " "]
-      (if is_playing
+      (cond
+        is_playing [:> Text {:dim-color true} "playing"]
+        item-name [:> Text {:dim-color true} "paused"]
+        :else [:> Text {:dim-color true} "stopped"])
+      (when item-name
         [:<>
-         [:> Text {:dim-color true} "playing "]
-         [:> Text item-name]
+         [:> Text " " item-name]
          [:> Text {:dim-color true} " by "]
          [:> Text (str/join ", " (map :name artists))]
          #_[:> Text {:dim-color true} " from "]
-         #_[:> Text (:name album)]]
-        [:> Text {:dim-color true} "stopped"])]
+         #_[:> Text (:name album)]])]
      [:> Box {:margin-top 1}
       [:> Text (:name device)]
       [:> Box {:flex-grow 1}]
