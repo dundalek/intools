@@ -5,9 +5,33 @@
             [intools.spotin.format :refer [format-duration]]
             [react]))
 
+(defn use-adjusted-time-progress [is_playing progress_ms duration_ms]
+  (let [[current-time set-current-time] (react/useState nil)
+        [last-updated-time set-last-updated-time] (react/useState nil)
+        time-offset (when (and last-updated-time current-time)
+                      (- current-time last-updated-time))
+        adjusted-progress-ms (cond-> progress_ms
+                               (pos? time-offset) (+ time-offset)
+                               duration_ms (Math/min duration_ms))]
+    (react/useEffect
+     (fn []
+       (set-current-time nil)
+       (if is_playing
+         (let [interval-id (js/setInterval
+                            #(set-current-time (js/Date.now))
+                            1000)]
+           (set-last-updated-time (js/Date.now))
+           #(js/clearInterval interval-id))
+         js/undefined))
+     #js [is_playing progress_ms duration_ms])
+
+    adjusted-progress-ms))
+
 (defn status-bar [{:keys [playback pending-requests]}]
   (let [{:keys [is_playing progress_ms shuffle_state repeat_state device item]} playback
-        {:keys [duration_ms album artists] item-name :name} item]
+        {:keys [duration_ms album artists] item-name :name} item
+        adjusted-progress-ms (use-adjusted-time-progress is_playing progress_ms duration_ms)]
+
     [:> Box {:border-style "single"
              :flex-direction "column"
              :padding-x 1}
@@ -31,7 +55,7 @@
       [:> Text {:dim-color true} "Volume "]
       [:> Text (:volume_percent device) "%"]
       [:> Box {:flex-grow 1}]
-      [:> Text (format-duration progress_ms)]
+      [:> Text (format-duration adjusted-progress-ms)]
       [:> Text {:dim-color true} " / "]
       [:> Text (format-duration duration_ms)]
       [:> Box {:flex-grow 1}]

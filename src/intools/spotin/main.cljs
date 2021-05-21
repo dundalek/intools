@@ -216,8 +216,8 @@
                                                  (when on-cancel (on-cancel))))]))
 
 (defn playback-status-bar []
-  [status-bar {:playback @(subscribe [:spotin/playback-status])
-               :pending-requests @(subscribe [:spotin/pending-requests])}])
+  [:f> status-bar {:playback @(subscribe [:spotin/playback-status])
+                   :pending-requests @(subscribe [:spotin/pending-requests])}])
 
 (defn device-item [{:keys [name type is_active]} {:keys [is-selected]}]
   [:> Box
@@ -473,9 +473,9 @@
         force-focus (not= focused-component-id "error-alert")
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id
                                                                                       :force force-focus})]
-    #_(hooks/use-interval
-       #(dispatch [:spotin/refresh-playback-status])
-       5000)
+    (hooks/use-interval
+     #(dispatch [:spotin/refresh-playback-status])
+     5000)
 
     (ink/useInput
      (fn [input _key]
