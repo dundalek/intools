@@ -344,7 +344,6 @@
   (let [{:keys [box-ref is-focused selected-index displayed-selected-index displayed-items]}
         (use-scrollable-box {:focus-id focus-id
                              :items items
-                             :on-menu on-menu
                              :on-activate on-activate
                              :auto-focus true})]
     (ink/useInput

@@ -1,9 +1,8 @@
 (ns intools.spotin.components.tracks-panel
   (:require [clojure.string :as str]
             [ink :refer [Box Spacer Text]]
-            [intools.hooks :as hooks]
             [intools.spotin.format :refer [format-album-release-year format-duration]]
-            [intools.views :refer [scroll-status uncontrolled-text-input use-selectable-list]]
+            [intools.views :refer [scroll-status uncontrolled-text-input use-scrollable-box]]
             [react]))
 
 (defn playlist-track-item [track {:keys [is-selected is-highlighted]}]
@@ -73,21 +72,11 @@
 
 (defn tracks-panel [{:keys [focus-id header tracks is-searching playback-item-uri track-item-component
                             on-activate on-menu on-search-change on-search-cancel]}]
-  (let [[selected set-selected] (react/useState #{})
-        on-toggle (fn [{:keys [id]}]
-                    (let [op (if (contains? selected id) disj conj)]
-                      (set-selected (op selected id))))
-        {:keys [selected-index is-focused]} (use-selectable-list {:focus-id focus-id
-                                                                  :items tracks
-                                                                  :on-toggle on-toggle
-                                                                  :on-activate on-activate
-                                                                  :auto-focus true})
-        box-ref (react/useRef)
-        viewport (hooks/use-ref-size box-ref)
-        viewport-height (or (:height viewport) (count tracks))
-        offset (hooks/use-scrollable-offset {:selected-index selected-index
-                                             :height viewport-height})
-        displayed-tracks (->> tracks (drop offset) (take viewport-height))]
+  (let [{:keys [box-ref is-focused selected-index displayed-selected-index displayed-items]}
+        (use-scrollable-box {:focus-id focus-id
+                             :items tracks
+                             :on-activate on-activate
+                             :auto-focus true})]
     (ink/useInput
      (fn [input _key]
        (when is-focused
@@ -109,11 +98,11 @@
      [:> Box {:flex-direction "column"
               :flex-grow 1
               :ref box-ref}
-      (->> displayed-tracks
+      (->> displayed-items
            (map-indexed
             (fn [idx track]
               ^{:key idx}
-              [track-item-component track {:is-selected (= idx (- selected-index offset))
+              [track-item-component track {:is-selected (= idx displayed-selected-index)
                                            :is-highlighted (and playback-item-uri
                                                                 (= playback-item-uri (:uri track)))}])))]
      [scroll-status selected-index tracks]]))
