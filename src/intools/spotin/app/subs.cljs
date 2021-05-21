@@ -115,22 +115,24 @@
   (fn [[album-tracks album-id]]
     (get album-tracks album-id)))
 
-(reg-sub :spotin/current-tracks
-  :<- [:spotin/current-playlist-tracks]
-  :<- [:spotin/current-album-tracks]
-  (fn [[playlist-tracks album-tracks]]
-    (or (seq playlist-tracks)
-        (seq album-tracks))))
+(defn search-tracks [tracks query]
+  (->> tracks
+       (search/filter-by query (fn [{:keys [name album artists]}]
+                                 (->> (concat [name (:name album)]
+                                              (map :name artists))
+                                      (str/join " "))))))
 
-(reg-sub :spotin/tracks-filtered
-  :<- [:spotin/current-tracks]
+(reg-sub :spotin/current-filtered-playlist-tracks
+  :<- [:spotin/current-playlist-tracks]
   :<- [:spotin/track-search-query]
   (fn [[tracks query]]
-    (->> tracks
-         (search/filter-by query (fn [{:keys [name album artists]}]
-                                   (->> (concat [name (:name album)]
-                                                (map :name artists))
-                                        (str/join " ")))))))
+    (search-tracks tracks query)))
+
+(reg-sub :spotin/current-filtered-album-tracks
+  :<- [:spotin/current-album-tracks]
+  :<- [:spotin/track-search-query]
+  (fn [[tracks query]]
+    (search-tracks tracks query)))
 
 (reg-sub :spotin/devices-menu
   (fn [db]

@@ -46,7 +46,11 @@
                                            :on-select on-select))))
 
 (defn use-scrollable-box [{:keys [items] :as opts}]
-  (let [{:keys [selected-index is-focused]} (use-selectable-list opts)
+  (let [[selected-index on-select] (react/useState 0)
+        {:keys [is-focused]} (use-selectable-list-controlled
+                              (assoc opts
+                                     :selected-index selected-index
+                                     :on-select on-select))
         box-ref (react/useRef)
         viewport (hooks/use-ref-size box-ref)
         viewport-height (if (pos? (:height viewport))
@@ -59,6 +63,7 @@
     {:box-ref box-ref
      :is-focused is-focused
      :selected-index selected-index
+     :select on-select
      :displayed-selected-index displayed-selected-index
      :displayed-items displayed-items}))
 

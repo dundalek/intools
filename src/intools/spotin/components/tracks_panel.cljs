@@ -72,17 +72,31 @@
 
 (defn tracks-panel [{:keys [focus-id header tracks is-searching playback-item-uri track-item-component
                             on-activate on-menu on-search-change on-search-cancel]}]
-  (let [{:keys [box-ref is-focused selected-index displayed-selected-index displayed-items]}
+  (let [{:keys [box-ref is-focused selected-index select displayed-selected-index displayed-items]}
         (use-scrollable-box {:focus-id focus-id
                              :items tracks
                              :on-activate on-activate
                              :auto-focus true})]
+
+    (react/useEffect
+     (fn []
+       (when playback-item-uri
+         (when-some [index (->> tracks
+                                (keep-indexed (fn [idx {:keys [uri]}]
+                                                (when (= uri playback-item-uri)
+                                                  idx)))
+                                (first))]
+           (select index)))
+       js/undefined)
+     #js [(empty? tracks)])
+
     (ink/useInput
      (fn [input _key]
        (when is-focused
          (case input
            "x" (when on-menu (on-menu (nth tracks selected-index)))
            nil))))
+
     [:> Box {:flex-direction "column"
              :flex-grow 1
              :border-style "single"

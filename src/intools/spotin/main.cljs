@@ -272,9 +272,8 @@
   (when-some [err @(subscribe [:spotin/error])]
     [:f> error-alert* err]))
 
-(defn main-tracks-panel [{:keys [header context-item track-item-component]}]
+(defn main-tracks-panel [{:keys [header context-item tracks-filtered track-item-component]}]
   (let [playback-item-uri @(subscribe [:spotin/playback-item-uri])
-        tracks-filtered @(subscribe [:spotin/tracks-filtered])
         track-search-query @(subscribe [:spotin/track-search-query])]
     [:f> tracks-panel {:focus-id "tracks-panel"
                        :header header
@@ -294,6 +293,21 @@
                                       (dispatch [:spotin/dispatch-fx :track-play
                                                  {:context context-item
                                                   :item item}]))}]))
+
+(defn playlist-tracks-panel [context-item]
+  (let [tracks-filtered @(subscribe [:spotin/current-filtered-playlist-tracks])]
+    [main-tracks-panel {:track-item-component playlist-track-item
+                        :context-item context-item
+                        :tracks-filtered tracks-filtered
+                        :header [playlist-header {:playlist context-item
+                                                  :tracks tracks-filtered}]}]))
+
+(defn album-tracks-panel [context-item]
+  (let [tracks-filtered @(subscribe [:spotin/current-filtered-album-tracks])]
+    [main-tracks-panel {:track-item-component album-track-item
+                        :context-item context-item
+                        :tracks-filtered tracks-filtered
+                        :header [album-header {:album context-item}]}]))
 
 (defn artist-item [{:keys [name followers]} {:keys [is-selected]}]
   [:> Box
@@ -458,7 +472,6 @@
         actions-search-query @(subscribe [:spotin/actions-search-query])
         track-search-query @(subscribe [:spotin/track-search-query])
         current-route @(subscribe [:spotin/current-route])
-        tracks-filtered @(subscribe [:spotin/tracks-filtered])
         playback-context-uri @(subscribe [:spotin/playback-context-uri])
         confirmation-modal-open? (some? @(subscribe [:spotin/confirmation-modal]))
         devices-menu-open? @(subscribe [:spotin/devices-menu])
@@ -588,16 +601,14 @@
         :playlist
         (let [context-id (-> current-route :params :playlist-id)
               context-item (get playlists context-id)]
-          ^{:key context-id} [main-tracks-panel {:track-item-component playlist-track-item
-                                                 :context-item context-item
-                                                 :header [playlist-header {:playlist context-item
-                                                                           :tracks tracks-filtered}]}])
+          ^{:key context-id}
+          [playlist-tracks-panel context-item])
+
         :album
         (let [context-id (-> current-route :params :album-id)
               context-item @(subscribe [:spotin/album-by-id context-id])]
-          ^{:key context-id} [main-tracks-panel {:track-item-component album-track-item
-                                                 :context-item context-item
-                                                 :header [album-header {:album context-item}]}])
+          ^{:key context-id}
+          [album-tracks-panel context-item])
 
         :artist
         [artist-panel {:artist @(subscribe [:spotin/artist-by-id (-> current-route :params :artist-id)])}]
