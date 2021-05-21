@@ -85,9 +85,7 @@
           (->> player-actions
                (remove (comp excluded-from-shortcuts-bar? :id))
                (filter :shortcut))
-          [{:shortcut "u"
-            :name "back"}
-           {:shortcut "q"
+          [{:shortcut "q"
             :name "quit"}]))
 
 (def playlist-actions
@@ -478,17 +476,18 @@
      5000)
 
     (ink/useInput
-     (fn [input _key]
+     (fn [input key]
        (when-not (or (and (= active-focus-id "action-menu") actions-search-query)
                      (and (= active-focus-id "playlists-panel") playlist-search-query)
                      (and (= active-focus-id "tracks-panel") track-search-query))
+         ;; when no menu/input component has focus we can make escape key to go to previous view
+         (when (and (or (not focused-component-id)
+                        (not= focused-component-id active-focus-id))
+                    (.-escape key))
+           (dispatch [:spotin/router-back]))
          (case input
            "q" (do (.exit app)
                    (.exit js/process))
-           "u" (dispatch [:spotin/router-back])
-            ; "x" (dispatch (if actions
-                            ; [:close-action-menu]
-                            ; [:open-action-menu player-actions]))
            (when-some [{:keys [event shortcut arg] :as action} (->> (case active-focus-id
                                                                       "action-menu" actions
                                                                       "playlists-panel" (concat playlist-actions player-actions)
