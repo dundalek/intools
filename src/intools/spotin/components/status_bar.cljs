@@ -61,9 +61,9 @@
       [:> Text {:dim-color true} " / "]
       [:> Text (format-duration duration_ms)]
       [:> Box {:flex-grow 1}]
-      [:> Text {:dim-color (not shuffle_state)}
-       "Shuffle " (if shuffle_state "on" "off")]
+      [:> Text {:dim-color true} "Shuffle "]
+      [:> Text {:dim-color (not shuffle_state)} (if shuffle_state "on" "off")]
       [:> Box {:flex-grow 1}]
-      [:> Text {:dim-color (= repeat_state "off")}
-       "Repeat " repeat_state]]]))
+      [:> Text {:dim-color true} "Repeat "]
+      [:> Text {:dim-color (= repeat_state "off")} repeat_state]]]))
 
