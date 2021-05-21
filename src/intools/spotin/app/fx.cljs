@@ -3,6 +3,10 @@
             [intools.spotin.model.spotify :as spotify]
             [re-frame.core :refer [dispatch reg-fx]]))
 
+(defn with-playback-refresh+ [p]
+  (-> (js/Promise.resolve p)
+      (.finally #(dispatch [:spotin/refresh-playback-status]))))
+
 (reg-fx :spotin/fetch-playback-status
   (fn [request-id]
     (-> (spotify/get-player+)
@@ -14,31 +18,31 @@
                   (throw e))))))
 
 (reg-fx :play-pause
-  (fn [_] (spotify/player-play-pause+)))
+  (fn [_] (with-playback-refresh+ (spotify/player-play-pause+))))
 
 (reg-fx :next
-  (fn [_] (spotify/player-next+)))
+  (fn [_] (with-playback-refresh+ (spotify/player-next+))))
 
 (reg-fx :previous
-  (fn [_] (spotify/player-previous+)))
+  (fn [_] (with-playback-refresh+ (spotify/player-previous+))))
 
 (reg-fx :shuffle
-  (fn [_] (spotify/player-toggle-shuffle+)))
+  (fn [_] (with-playback-refresh+ (spotify/player-toggle-shuffle+))))
 
 (reg-fx :repeat
-  (fn [_] (spotify/player-toggle-repeat+)))
+  (fn [_] (with-playback-refresh+ (spotify/player-toggle-repeat+))))
 
 (reg-fx :playlist-play
-  (fn [arg] (spotify/player-play+ {:context_uri (:uri arg)})))
+  (fn [arg] (with-playback-refresh+ (spotify/player-play+ {:context_uri (:uri arg)}))))
 
 (reg-fx :album-play
-  (fn [{:keys [item]}] (spotify/player-play+ {:context_uri (:uri item)})))
+  (fn [{:keys [item]}] (with-playback-refresh+ (spotify/player-play+ {:context_uri (:uri item)}))))
 
 (reg-fx :artist-play
-  (fn [{:keys [item]}] (spotify/player-play+ {:context_uri (:uri item)})))
+  (fn [{:keys [item]}] (with-playback-refresh+ (spotify/player-play+ {:context_uri (:uri item)}))))
 
 (reg-fx :artist-context-play
-  (fn [{:keys [context]}] (spotify/player-play+ {:context_uri (:uri context)})))
+  (fn [{:keys [context]}] (with-playback-refresh+ (spotify/player-play+ {:context_uri (:uri context)}))))
 
 (reg-fx :track-play
   (fn [{:keys [item items context]}]
@@ -50,13 +54,13 @@
                           (first))
             opts {:uris (into [] (map :uri items))
                   :offset {:position position}}]
-        (spotify/player-play+ opts))
-      (spotify/player-play+ {:context_uri (:uri context)
-                             :offset {:uri (:uri item)}}))))
+        (with-playback-refresh+ (spotify/player-play+ opts)))
+      (with-playback-refresh+ (spotify/player-play+ {:context_uri (:uri context)
+                                                     :offset {:uri (:uri item)}})))))
 
 (reg-fx :spotin/player-transfer
   (fn [device-id]
-    (spotify/player-transfer+ device-id)))
+    (with-playback-refresh+ (spotify/player-transfer+ device-id))))
 
 (reg-fx :spotin/player-volume
   (fn [{:keys [volume-percent request-id]}]
