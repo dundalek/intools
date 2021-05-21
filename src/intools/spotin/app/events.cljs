@@ -97,7 +97,7 @@
                             :params {:playlist-id playlist-id}})
    :spotin/load-playlist-tracks playlist-id})
 
-(reg-event-fx :set-selected-playlist
+(reg-event-fx :select-playlist
   (fn [{db :db} [_ {:keys [id]}]]
     (select-playlist-fx db id)))
 

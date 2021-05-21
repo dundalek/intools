@@ -106,7 +106,7 @@
    {:id :playlist-open
     :name "open"
     :shortcut "⏎"
-    :event [:set-selected-playlist]}
+    :event [:select-playlist]}
    ;;{:id :playlist-create
    ;; :name "TBD create playlist"}
    ;;{:id :folder-create
@@ -579,9 +579,12 @@
                                                                 player-actions)]
                                             (dispatch [:open-action-menu actions])))
                                :on-activate (fn [playlist]
-                                              (dispatch [:set-selected-playlist playlist]))}]])
-                                              ;; Try to focus the tracks panel after playlist selected, it is a bit brittle
-                                              ;;(focus-next))}]])
+                                              (let [{:keys [name params]} current-route]
+                                                (if (and (= name :playlist)
+                                                         (= (:playlist-id params) (:id playlist)))
+                                                  (dispatch [:spotin/dispatch-fx :playlist-play playlist])
+                                                  (dispatch [:select-playlist playlist]))))}]])
+
       (case (:name current-route)
         :playlist
         (let [context-id (-> current-route :params :playlist-id)
