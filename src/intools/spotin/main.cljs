@@ -165,8 +165,16 @@
    ; {:name "TBD Add to playlist"}
    ; {:name "TBD Share"}])
 
+(def artist-tracks-actions
+  (into [{:name "play artist"
+          :event [:spotin/dispatch-fx :artist-context-play]}]
+        ;; dropping the `open artist` actions, it is not useful since we are already on artist's screen
+        (drop 1 tracks-actions)))
+
 (def artist-actions
-  [{:name "open"
+  [{:name "play artist"
+    :event [:spotin/dispatch-fx :artist-play]}
+   {:name "open"
     :shortcut "⏎"
     :event [:spotin/open-artist]}])
    ;;{:name "TBD Follow"}])
@@ -389,7 +397,7 @@
                                         (let [tracks-actions (map #(assoc % :arg {:item item
                                                                                   :items top-tracks
                                                                                   :context artist})
-                                                                  tracks-actions)
+                                                                  artist-tracks-actions)
                                               actions (concat tracks-actions [action-separator] player-actions)]
                                           (dispatch [:open-action-menu actions])))
                              :on-activate (fn [item]

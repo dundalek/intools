@@ -34,6 +34,12 @@
 (reg-fx :album-play
   (fn [{:keys [item]}] (spotify/player-play+ {:context_uri (:uri item)})))
 
+(reg-fx :artist-play
+  (fn [{:keys [item]}] (spotify/player-play+ {:context_uri (:uri item)})))
+
+(reg-fx :artist-context-play
+  (fn [{:keys [context]}] (spotify/player-play+ {:context_uri (:uri context)})))
+
 (reg-fx :track-play
   (fn [{:keys [item items context]}]
     (if (= (:type context) "artist")
