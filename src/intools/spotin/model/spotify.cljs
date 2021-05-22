@@ -1,9 +1,9 @@
 (ns intools.spotin.model.spotify
   (:require [clojure.edn :as edn]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [request-promise-native :as rp]))
 
 (def fsp (js/require "fs/promises"))
-(def rp (js/require "request-promise-native"))
 
 (def client-id (.. js/process -env -SPOTIFY_CLIENT_ID))
 (def client-secret (.. js/process -env -SPOTIFY_CLIENT_SECRET))

@@ -7,19 +7,36 @@
 
  :nrepl {:port 34638}
 
+ ;; "yoga-layout-prebuilt" includes native libs, so it cannot be AOT bundled
  :builds
  {:dkmsin {:target :node-script
            :output-to "target/dkmsin.js"
-           :main intools.dkmsin.main/-main}
+           :main intools.dkmsin.main/-main
+           :js-options
+           {:js-provider :shadow
+            :keep-native-requires true
+            :keep-as-require #{"yoga-layout-prebuilt"}}}
 
   :flatpakin {:target :node-script
               :output-to "target/flatpakin.js"
-              :main intools.flatpakin.main/-main}
+              :main intools.flatpakin.main/-main
+              :js-options
+              {:js-provider :shadow
+               :keep-native-requires true
+               :keep-as-require #{"yoga-layout-prebuilt"}}}
 
   :resticin {:target :node-script
              :output-to "target/resticin.js"
-             :main intools.resticin.main/-main}
+             :main intools.resticin.main/-main
+             :js-options
+             {:js-provider :shadow
+              :keep-native-requires true
+              :keep-as-require #{"yoga-layout-prebuilt"}}}
 
   :spotin {:target :node-script
            :output-to "target/spotin.js"
-           :main intools.spotin.main/-main}}}
+           :main intools.spotin.main/-main
+           :js-options
+           {:js-provider :shadow
+            :keep-native-requires true
+            :keep-as-require #{"yoga-layout-prebuilt"}}}}}

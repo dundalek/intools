@@ -7,7 +7,11 @@
            :sha "da9166015f6a28b2c18fa7706e457901d02a5d81"}}
 
  :aliases
- {:fmt
+ {:shadow-cljs
+  {:extra-deps {thheller/shadow-cljs {:mvn/version "2.11.23"}}
+   :main-opts ["-m" "shadow.cljs.devtools.cli"]}
+
+  :fmt
   {:extra-deps {cljfmt/cljfmt {:mvn/version "0.6.4"}}
    :main-opts ["-m" "cljfmt.main" "--indents" "cljfmt-indents.edn" "check" "src"]}
 
