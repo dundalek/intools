@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+module="$1"
+clojure -M:shadow-cljs watch "$module"

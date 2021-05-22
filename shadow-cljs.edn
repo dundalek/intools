@@ -1,16 +1,12 @@
 {:source-paths
- ["src"]
-
- :dependencies
- [[reagent "1.0.0"]
-  [re-frame "1.2.0"]]
+ ["lib/src" "modules/dkmsin/src" "modules/flatkpakin/src" "modules/resticin/src" "modules/spotin/src/"]
 
  :nrepl {:port 34638}
 
  ;; "yoga-layout-prebuilt" includes native libs, so it cannot be AOT bundled
  :builds
  {:dkmsin {:target :node-script
-           :output-to "target/dkmsin.js"
+           :output-to "modules/dkmsin/build/dkmsin.js"
            :main intools.dkmsin.main/-main
            :js-options
            {:js-provider :shadow
@@ -18,7 +14,7 @@
             :keep-as-require #{"yoga-layout-prebuilt"}}}
 
   :flatpakin {:target :node-script
-              :output-to "target/flatpakin.js"
+              :output-to "modules/flatpakin/build/flatpakin.js"
               :main intools.flatpakin.main/-main
               :js-options
               {:js-provider :shadow
@@ -26,7 +22,7 @@
                :keep-as-require #{"yoga-layout-prebuilt"}}}
 
   :resticin {:target :node-script
-             :output-to "target/resticin.js"
+             :output-to "modules/resticin/build/resticin.js"
              :main intools.resticin.main/-main
              :js-options
              {:js-provider :shadow
@@ -34,7 +30,7 @@
               :keep-as-require #{"yoga-layout-prebuilt"}}}
 
   :spotin {:target :node-script
-           :output-to "target/spotin.js"
+           :output-to "modules/spotin/build/spotin.js"
            :main intools.spotin.main/-main
            :js-options
            {:js-provider :shadow

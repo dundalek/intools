@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+
+module="$1"
+out="modules/$module/build/$module.js"
+
+# ink requires devtools, which requires ws modules that prevent bundling, patch it and comment out
+sed -i "s/\\/*\\(require('.\\/devtools');\\)/\\/\\/\\1/" node_modules/ink/build/reconciler.js
+
+clojure -M:shadow-cljs release "$module"
+
+# restore patched code
+sed -i "s/\\/*\\(require('.\\/devtools');\\)/\\1/" node_modules/ink/build/reconciler.js
+
+chmod +x "$out"
+

@@ -1,17 +1,10 @@
 {
+  "private": true,
+  "workspaces": [
+    "modules/*"
+  ],
   "dependencies": {
-    "yoga-layout-prebuilt": "^1.10.0"
-  },
-  "devDependencies": {
-    "ink": "3.0.8",
-    "ink-spinner": "^4.0.2",
-    "ink-text-input": "4.0.1",
     "react": "17.0.1",
-    "react-dom": "17.0.1",
-    "request": "2.88.2",
-    "request-promise-native": "1.0.9"
-  },
-  "scripts": {
-    "lint": "clj-kondo --lint src"
+    "react-dom": "17.0.1"
   }
 }
