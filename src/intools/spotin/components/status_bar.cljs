@@ -6,26 +6,26 @@
             [react]))
 
 (defn use-adjusted-time-progress [is_playing progress_ms duration_ms]
-  (let [[current-time set-current-time] (react/useState nil)
-        [last-updated-time set-last-updated-time] (react/useState nil)
-        time-offset (when (and last-updated-time current-time)
-                      (- current-time last-updated-time))
-        adjusted-progress-ms (cond-> progress_ms
-                               (pos? time-offset) (+ time-offset)
-                               duration_ms (Math/min duration_ms))]
+  (let [[adjusted-progress set-adjusted-progress] (react/useState progress_ms)
+        last-updated-time (react/useRef nil)]
     (react/useEffect
      (fn []
-       (set-current-time nil)
+       (set-adjusted-progress progress_ms)
        (if is_playing
          (let [interval-id (js/setInterval
-                            #(set-current-time (js/Date.now))
+                            (fn []
+                              (let [time-offset (- (js/Date.now) (.-current last-updated-time))
+                                    adjusted (cond-> progress_ms
+                                               (pos? time-offset) (+ time-offset)
+                                               duration_ms (Math/min duration_ms))]
+                                (set-adjusted-progress adjusted)))
                             1000)]
-           (set-last-updated-time (js/Date.now))
+           (set! (.-current last-updated-time) (js/Date.now))
            #(js/clearInterval interval-id))
          js/undefined))
      #js [is_playing progress_ms duration_ms])
 
-    adjusted-progress-ms))
+    adjusted-progress))
 
 (defn status-bar [{:keys [playback pending-requests]}]
   (let [{:keys [is_playing progress_ms shuffle_state repeat_state device item]} playback
