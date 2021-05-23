@@ -12,6 +12,7 @@
     "yoga-layout-prebuilt": "1.10.0"
   },
   "devDependencies": {
+    "env-paths": "2.2.1",
     "ink": "3.0.8",
     "ink-spinner": "4.0.2",
     "ink-text-input": "4.0.1",

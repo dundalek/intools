@@ -3,7 +3,10 @@
             [clojure.string :as str]
             [request-promise-native :as rp]))
 
+(def path (js/require "path"))
 (def fsp (js/require "fs/promises"))
+(def env-paths (js/require "env-paths"))
+
 
 (def client-id (.. js/process -env -SPOTIFY_CLIENT_ID))
 (def client-secret (.. js/process -env -SPOTIFY_CLIENT_SECRET))
@@ -68,8 +71,6 @@
                  (let [token (.-access_token body)]
                    (set! *access-token* token)
                    token))))))
-        ; (.catch (fn [err]
-        ;           (println "Request error:" err))))))
 
 (defn expired-token? [^js e]
   (and (= (.-statusCode e) 401)
@@ -120,15 +121,24 @@
                                         :json true}
                                  (some? body) (assoc :body (clj->js body))))))
 
+(def cache-dir
+  (-> (env-paths "spotin" #js {:suffix ""})
+      .-cache
+      (path.join "v0")))
+
+(defonce ensure-cache-dir+ (delay (.mkdir fsp cache-dir #js {:recursive true})))
+
 (defn cache-path [k]
-  (str ".cache/" k ".json"))
+  (.join path cache-dir k))
 
 (defn load-json+ [path]
-  (-> (.readFile fsp path "utf-8")
+  (-> @ensure-cache-dir+
+      (.then #(.readFile fsp path "utf-8"))
       (.then #(js/JSON.parse %))))
 
 (defn store-json+ [path body]
-  (.writeFile fsp path (js/JSON.stringify body nil 2)))
+  (-> @ensure-cache-dir+
+      (.then #(.writeFile fsp path (js/JSON.stringify body)))))
 
 (defn load-cached-json+ [k]
   (load-json+ (cache-path k)))
@@ -137,24 +147,29 @@
   (store-json+ (cache-path k) body))
 
 (defn load-cached-edn+ [k]
-  (-> (.readFile fsp (cache-path k) "utf-8")
+  (-> @ensure-cache-dir+
+      (.then #(.readFile fsp (cache-path k) "utf-8"))
       (.then #(edn/read-string %))))
 
 (defn store-cached-edn+ [k body]
-  (.writeFile fsp (cache-path k) (prn-str body)))
+  (-> @ensure-cache-dir+
+      (.then #(.writeFile fsp (cache-path k) (prn-str body)))))
 
 (defn cache-edn+ [k f]
   (-> (js/Promise.resolve)
       (.then f)
       (.then (fn [body]
                (-> (store-cached-edn+ k body)
-                   (.then (fn [] body)))))))
+                   (.then (fn [] body))
+                   (.catch (fn [_e] body)))))))
 
 (defn cache-result+ [k f]
-  (-> (f)
+  (-> (js/Promise.resolve)
+      (.then f)
       (.then (fn [body]
                (-> (store-json+ (cache-path k) body)
-                   (.then (fn [] body)))))))
+                   (.then (fn [] body))
+                   (.catch (fn [_e] body)))))))
 
 (defn with-cached-json+ [k f]
   (-> (load-cached-json+ k)
