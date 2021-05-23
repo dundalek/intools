@@ -33,9 +33,9 @@
 (defn authorization-url []
   (str "https://accounts.spotify.com/authorize"
        "?response_type=code"
-       "&client_id=" client-id
        "&scope=" (js/encodeURIComponent (str/join " " scopes))
-       "&redirect_uri=" redirect-uri))
+       "&redirect_uri=" (js/encodeURIComponent redirect-uri)
+       "&client_id=" (js/encodeURIComponent client-id)))
 
 (defn tokens-from-authorization-code+ [code]
   (let [auth-options (clj->js
