@@ -7,9 +7,9 @@
 (def fsp (js/require "fs/promises"))
 (def env-paths (js/require "env-paths"))
 
-
 (def client-id (.. js/process -env -SPOTIFY_CLIENT_ID))
 (def client-secret (.. js/process -env -SPOTIFY_CLIENT_SECRET))
+(def refresh-token (.. js/process -env -SPOTIFY_REFRESH_TOKEN))
 (def redirect-uri "http://localhost:8888/callback")
 
 (def scopes
@@ -21,8 +21,6 @@
    "user-modify-playback-state"
    "user-read-currently-playing"
    "user-library-read"])
-
-(def refresh-token (.. js/process -env -SPOTIFY_REFRESH_TOKEN))
 
 (defonce ^:dynamic *access-token* nil)
 (defonce ^:dynamic *before-request-callback* nil)

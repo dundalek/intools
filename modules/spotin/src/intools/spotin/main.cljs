@@ -1,5 +1,6 @@
 (ns intools.spotin.main
   (:require [clojure.string :as str]
+            [goog.object :as gobj]
             [ink :refer [Box Spacer Text]]
             [intools.hooks :as hooks]
             [intools.spotin.app.events]
@@ -623,6 +624,14 @@
   (reset! !app (ink/render (r/as-element [:f> app]))))
 
 (defn -main []
+  (when-some [missing-credentials (->> ["SPOTIFY_CLIENT_ID" "SPOTIFY_CLIENT_SECRET" "SPOTIFY_REFRESH_TOKEN"]
+                                       (filter #(str/blank? (-> js/process .-env (gobj/get %))))
+                                       (seq))]
+    (doseq [x missing-credentials]
+      (println "Missing" x))
+    (println "\nPlease refer to the README for configuration instructions.")
+    (.exit js/process))
+
   (set! spotify/*before-request-callback* #(dispatch [:spotin/request-started]))
   (set! spotify/*after-request-callback* #(dispatch [:spotin/request-finished]))
   (set! spotify/*request-error-callback* (fn [error request]
