@@ -1,7 +1,7 @@
 (ns intools.spotin.model.spotify
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
-            [request-promise-native :as rp]))
+            [node-fetch :as fetch]))
 
 (def path (js/require "path"))
 (def fsp (js/require "fs/promises"))
@@ -38,48 +38,70 @@
        "&redirect_uri=" (js/encodeURIComponent redirect-uri)
        "&client_id=" (js/encodeURIComponent client-id)))
 
+(defn encode-form-params [form-params]
+  (reduce (fn [params [k v]]
+            (.append params (name k) v)
+            params)
+          (js/URLSearchParams.)
+          form-params))
+
+(defn fetch-request [{:keys [url body form json method] :as opts}]
+  (-> (fetch url (-> (cond-> opts
+                       body (assoc :body (js/JSON.stringify body))
+                       (and json (not form)) (update :headers assoc :Content-Type "application/json")
+                       form (assoc :body (encode-form-params form)))
+                     (dissoc :json :form)
+                     (clj->js)))
+      (.then (fn [response]
+               (if (.-ok response)
+                 (if (and json (not= (.-status response) 204))
+                   (-> (.text response)
+                       (.then (fn [text]
+                                (if-not (str/blank? text)
+                                  (js/JSON.parse text)
+                                  response))))
+                   response)
+                 (throw response))))))
+
 (defn tokens-from-authorization-code+ [code]
-  (let [auth-options (clj->js
-                      {:method "POST"
-                       :url "https://accounts.spotify.com/api/token"
-                       :headers {:Authorization (str "Basic "
-                                                     (-> (js/Buffer. (str client-id ":" client-secret))
-                                                         (.toString "base64")))}
-                       :form {:grant_type "authorization_code"
-                              :code code
-                              :redirect_uri redirect-uri}
-                       :json true})]
-    (-> (rp auth-options)
+  (let [auth-options {:method "POST"
+                      :url "https://accounts.spotify.com/api/token"
+                      :headers {:Authorization (str "Basic "
+                                                    (-> (js/Buffer. (str client-id ":" client-secret))
+                                                        (.toString "base64")))}
+                      :form {:grant_type "authorization_code"
+                             :code code
+                             :redirect_uri redirect-uri}
+                      :json true}]
+    (-> (fetch-request auth-options)
         (.then (fn [^js body]
                  (js/console.log body)
                  body)))))
 
 (defn refresh-token+ [rtoken]
-  (let [auth-options (clj->js
-                      {:method "POST"
-                       :url "https://accounts.spotify.com/api/token"
-                       :headers {:Authorization (str "Basic "
-                                                     (-> (js/Buffer. (str client-id ":" client-secret))
-                                                         (.toString "base64")))}
-                       :form {:grant_type "refresh_token"
-                              :refresh_token rtoken}
-                       :json true})]
-    (-> (rp auth-options)
+  (let [auth-options {:method "POST"
+                      :url "https://accounts.spotify.com/api/token"
+                      :headers {:Authorization (str "Basic "
+                                                    (-> (js/Buffer. (str client-id ":" client-secret))
+                                                        (.toString "base64")))}
+                      :form {:grant_type "refresh_token"
+                             :refresh_token rtoken}
+                      :json true}]
+    (-> (fetch-request auth-options)
         (.then (fn [^js body]
                  (let [token (.-access_token body)]
                    (set! *access-token* token)
                    token))))))
 
 (defn expired-token? [^js e]
-  (and (= (.-statusCode e) 401)
-       (= (some-> e .-error .-error .-message) "The access token expired")))
+  (= (.-status e) 401))
 
 (defn add-authorization-header [opts]
   (update opts :headers assoc :Authorization (str "Bearer " *access-token*)))
 
 (defn authorized-request+ [opts]
   (-> (js/Promise.resolve)
-      (.then #(rp (clj->js (add-authorization-header opts))))))
+      (.then #(fetch-request (add-authorization-header opts)))))
 
 (defn request-with-auto-refresh+ [opts]
   (-> (js/Promise.resolve)
@@ -100,8 +122,6 @@
                 (throw e)))
       (.finally #(when *after-request-callback*
                    (*after-request-callback* opts)))))
-
-(def request+ request-with-auto-refresh+)
 
 (defn authorized-put+
   ([url] (authorized-put+ url nil))
@@ -223,9 +243,6 @@
 
 (defn get-all-playlists+ []
   (paginated-get+ "https://api.spotify.com/v1/me/playlists?limit=50"))
-
-(defn get-playlist+ [playlist-id]
-  (cached-get+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id))))
 
 (defn get-playlist-tracks+ [playlist-id]
   ;; TODO use paginated-get+

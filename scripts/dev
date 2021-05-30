@@ -1,4 +1,11 @@
 #!/usr/bin/env sh
 
 module="$1"
+
+# encoding package is optional, but messes with shadow-cljs build
+sed -i "s/\\/*\\(convert = require('encoding').convert;\\)/\\/\\/\\1/" node_modules/node-fetch/lib/index.js
+
 clojure -M:shadow-cljs watch "$module"
+
+# restore patched code
+sed -i "s/\\/*\\(convert = require('encoding').convert;\\)/\\1/" node_modules/node-fetch/lib/index.js

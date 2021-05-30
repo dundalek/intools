@@ -6,10 +6,14 @@ out="modules/$module/build/$module.js"
 # ink requires devtools, which requires ws modules that prevent bundling, patch it and comment out
 sed -i "s/\\/*\\(require('.\\/devtools');\\)/\\/\\/\\1/" node_modules/ink/build/reconciler.js
 
+# encoding package is optional, but messes with shadow-cljs build
+sed -i "s/\\/*\\(convert = require('encoding').convert;\\)/\\/\\/\\1/" node_modules/node-fetch/lib/index.js
+
 clojure -M:shadow-cljs release "$module"
 
 # restore patched code
 sed -i "s/\\/*\\(require('.\\/devtools');\\)/\\1/" node_modules/ink/build/reconciler.js
+sed -i "s/\\/*\\(convert = require('encoding').convert;\\)/\\1/" node_modules/node-fetch/lib/index.js
 
 chmod +x "$out"
 

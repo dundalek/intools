@@ -262,11 +262,10 @@
      [:> Box
       [:> Text {:wrap "truncate-end"} "API Error: " method " " url]]
      [:> Box
-      (if (and (instance? js/Error error) (= (.-name error) "StatusCodeError"))
-        (let [error (-> error .-error .-error)]
-          [:> Text
-           (.-status error) " - " (.-reason error) "\n"
-           (.-message error)])
+      (if (and (some? error) (= (-> error .-constructor .-name) "Response"))
+        [:> Text
+         (.-status error) " - " (.-statusText error) "\n"]
+         ;; TODO resolve body for message if it exists
         [:> Text (str error)])]]))
 
 (defn error-alert []
