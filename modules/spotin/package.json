@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "env-paths": "2.2.1",
-    "ink": "3.0.8",
+    "ink": "3.0.9",
     "ink-spinner": "4.0.2",
     "ink-text-input": "4.0.1",
     "react": "17.0.1",
