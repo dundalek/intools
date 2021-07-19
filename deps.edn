@@ -18,37 +18,16 @@
 
   :fmt
   {:extra-deps {cljfmt/cljfmt {:mvn/version "0.6.4"}}
-   :main-opts ["-m" "cljfmt.main" "--indents" "cljfmt-indents.edn" "check"
-               "lib/src"
-               "modules/dkmsin/src"
-               "modules/flatpakin/src"
-               "modules/resticin/src"
-               "modules/spotin/src"]}
+   :main-opts ["-m" "cljfmt.main" "--indents" "cljfmt-indents.edn" "check"]}
 
   :fix
   {:extra-deps {cljfmt/cljfmt {:mvn/version "0.6.4"}}
-   :main-opts ["-m" "cljfmt.main" "--indents" "cljfmt-indents.edn" "fix"
-               "lib/src"
-               "modules/dkmsin/src"
-               "modules/flatpakin/src"
-               "modules/resticin/src"
-               "modules/spotin/src"]}
-
+   :main-opts ["-m" "cljfmt.main" "--indents" "cljfmt-indents.edn" "fix"]}
 
   :nsorg
   {:extra-deps {nsorg-cli/nsorg-cli {:mvn/version "0.3.1"}}
-   :main-opts ["-m" "nsorg.cli"
-               "lib/src"
-               "modules/dkmsin/src"
-               "modules/flatpakin/src"
-               "modules/resticin/src"
-               "modules/spotin/src"]}
+   :main-opts ["-m" "nsorg.cli"]}
 
   :nsorg/fix
   {:extra-deps {nsorg-cli/nsorg-cli {:mvn/version "0.3.1"}}
-   :main-opts ["-m" "nsorg.cli" "--replace"
-               "lib/src"
-               "modules/dkmsin/src"
-               "modules/flatpakin/src"
-               "modules/resticin/src"
-               "modules/spotin/src"]}}}
+   :main-opts ["-m" "nsorg.cli" "--replace"]}}}

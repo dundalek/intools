@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+
+paths="lib/src modules/dkmsin/src modules/flatpakin/src modules/resticin/src modules/spotin/src"
+
+if [ "$1" = "fix" ]
+then
+  clojure -Mnsorg/fix $paths
+  clojure -Mfix $paths
+else
+  clojure -Mnsorg $paths
+  clojure -Mfmt $paths
+fi
