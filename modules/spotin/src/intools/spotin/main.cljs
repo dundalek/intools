@@ -42,9 +42,11 @@
     :event [:spotin/dispatch-fx :previous]}
    {:id :shuffle
     :name "shuffle"
+    :shortcut "s"
     :event [:spotin/dispatch-fx :shuffle]}
    {:id :repeat
     :name "repeat"
+    :shortcut "p"
     :event [:spotin/dispatch-fx :repeat]}
    {:id :spotin/open-currently-playing
     :name "currently playing"
@@ -71,12 +73,11 @@
     :shortcut "e"
     :event [:spotin/open-devices-menu]}])
 
-(def excluded-from-shortcuts-bar?
-  #{:spotin/player-volume-up
-    :spotin/player-volume-down
-    :spotin/player-seek-forward
-    :spotin/player-seek-backward
-    :spotin/open-currently-playing})
+(def included-in-shortcuts-bar?
+  #{:play-pause
+    :next
+    :previous
+    :spotin/devices})
 
 (def shortcuts-bar-actions
   (concat [{:shortcut "x"
@@ -84,8 +85,9 @@
           [{:shortcut "/"
             :name "search"}]
           (->> player-actions
-               (remove (comp excluded-from-shortcuts-bar? :id))
-               (filter :shortcut))
+               (filter (fn [{:keys [shortcut id]}]
+                         (and (some? shortcut)
+                              (included-in-shortcuts-bar? id)))))
           [{:shortcut "q"
             :name "quit"}]))
 
