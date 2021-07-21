@@ -3,8 +3,27 @@
             [intools.spotin.model.spotify :as spotify]
             [re-frame.core :refer [dispatch reg-fx]]))
 
-(defn with-playback-refresh+ [p]
-  (-> (js/Promise.resolve p)
+(defn fetch-error? [err]
+  (= (-> err .-constructor .-name) "Response"))
+
+(defn error-not-found? [err]
+  (and (fetch-error? err)
+       (= (.-status err) 404)))
+
+(defn with-playback-refresh+ [f]
+  (-> (js/Promise.resolve)
+      (.then #(f))
+      (.catch (fn [err]
+                (if (error-not-found? err)
+                  (-> (spotify/get-player-devices+)
+                      (.then (fn [{:keys [devices]}]
+                               (if (= (count devices) 1)
+                                 (let [device-id (-> devices first :id)]
+                                   (-> (spotify/player-transfer+ device-id)
+                                       (.then #(f))))
+                                 ;; TODO open the device picker when multiple devices are listed
+                                 (throw err)))))
+                  (throw err))))
       (.finally #(dispatch [:spotin/refresh-playback-status]))))
 
 (reg-fx :spotin/fetch-playback-status
@@ -18,31 +37,31 @@
                   (throw e))))))
 
 (reg-fx :play-pause
-  (fn [_] (with-playback-refresh+ (spotify/player-play-pause+))))
+  (fn [_] (with-playback-refresh+ spotify/player-play-pause+)))
 
 (reg-fx :next
-  (fn [_] (with-playback-refresh+ (spotify/player-next+))))
+  (fn [_] (with-playback-refresh+ spotify/player-next+)))
 
 (reg-fx :previous
-  (fn [_] (with-playback-refresh+ (spotify/player-previous+))))
+  (fn [_] (with-playback-refresh+ spotify/player-previous+)))
 
 (reg-fx :shuffle
-  (fn [_] (with-playback-refresh+ (spotify/player-toggle-shuffle+))))
+  (fn [_] (with-playback-refresh+ spotify/player-toggle-shuffle+)))
 
 (reg-fx :repeat
-  (fn [_] (with-playback-refresh+ (spotify/player-toggle-repeat+))))
+  (fn [_] (with-playback-refresh+ spotify/player-toggle-repeat+)))
 
 (reg-fx :playlist-play
-  (fn [arg] (with-playback-refresh+ (spotify/player-play+ {:context_uri (:uri arg)}))))
+  (fn [arg] (with-playback-refresh+ #(spotify/player-play+ {:context_uri (:uri arg)}))))
 
 (reg-fx :album-play
-  (fn [{:keys [item]}] (with-playback-refresh+ (spotify/player-play+ {:context_uri (:uri item)}))))
+  (fn [{:keys [item]}] (with-playback-refresh+ #(spotify/player-play+ {:context_uri (:uri item)}))))
 
 (reg-fx :artist-play
-  (fn [{:keys [item]}] (with-playback-refresh+ (spotify/player-play+ {:context_uri (:uri item)}))))
+  (fn [{:keys [item]}] (with-playback-refresh+ #(spotify/player-play+ {:context_uri (:uri item)}))))
 
 (reg-fx :artist-context-play
-  (fn [{:keys [context]}] (with-playback-refresh+ (spotify/player-play+ {:context_uri (:uri context)}))))
+  (fn [{:keys [context]}] (with-playback-refresh+ #(spotify/player-play+ {:context_uri (:uri context)}))))
 
 (reg-fx :track-play
   (fn [{:keys [item items context]}]
@@ -54,13 +73,13 @@
                           (first))
             opts {:uris (into [] (map :uri items))
                   :offset {:position position}}]
-        (with-playback-refresh+ (spotify/player-play+ opts)))
-      (with-playback-refresh+ (spotify/player-play+ {:context_uri (:uri context)
-                                                     :offset {:uri (:uri item)}})))))
+        (with-playback-refresh+ #(spotify/player-play+ opts)))
+      (with-playback-refresh+ #(spotify/player-play+ {:context_uri (:uri context)
+                                                      :offset {:uri (:uri item)}})))))
 
 (reg-fx :spotin/player-transfer
   (fn [device-id]
-    (with-playback-refresh+ (spotify/player-transfer+ device-id))))
+    (with-playback-refresh+ #(spotify/player-transfer+ device-id))))
 
 (reg-fx :spotin/player-volume
   (fn [{:keys [volume-percent request-id]}]
