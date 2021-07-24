@@ -1,5 +1,6 @@
 (ns intools.spotin.app.fx
-  (:require [intools.spotin.model.playlist :as playlist]
+  (:require [intools.spotin.app.query :refer [!query-client]]
+            [intools.spotin.model.playlist :as playlist]
             [intools.spotin.model.spotify :as spotify]
             [re-frame.core :refer [dispatch reg-fx]]))
 
@@ -114,18 +115,9 @@
         ;; TODO: maybe only refresh the single playlist
         (.then #(dispatch [:spotin/refresh-playlists])))))
 
-(reg-fx :spotin/load-cached-playlists
-  (fn [_]
-    (-> (spotify/load-cached-edn+ "get-all-playlists+")
-        (.then (fn [{:keys [items]}]
-                 (dispatch [:set-cached-playlists items]))
-               (fn [_ignore])))))
-
-(reg-fx :spotin/refresh-playlists
-  (fn [_]
-    (-> (spotify/cache-edn+ "get-all-playlists+" spotify/get-all-playlists+)
-        (.then (fn [{:keys [items]}]
-                 (dispatch [:set-playlists items]))))))
+(reg-fx :spotin/invalidate-query
+  (fn [query-key]
+    (.invalidateQueries @!query-client query-key)))
 
 (reg-fx :spotin/load-playlist-tracks
   (fn [playlist-id]

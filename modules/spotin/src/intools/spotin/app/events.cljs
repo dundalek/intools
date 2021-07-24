@@ -2,13 +2,11 @@
   (:require [intools.spotin.app.core :as app]
             [intools.spotin.app.db :as db]
             [intools.spotin.model.spotify :as spotify]
-            [re-frame.core :refer [reg-event-db reg-event-fx]]))
+            [re-frame.core :refer [inject-cofx reg-event-db reg-event-fx]]))
 
 (reg-event-fx :spotin/init
   (fn [_ _]
-    {:db db/default-db
-     :fx [[:spotin/load-cached-playlists nil]
-          [:spotin/refresh-playlists nil]]}))
+    {:db db/default-db}))
 
 (reg-event-db :spotin/request-started
   (fn [db]
@@ -63,24 +61,7 @@
 
 (reg-event-fx :spotin/refresh-playlists
   (fn [_ _]
-    {:spotin/refresh-playlists nil}))
-
-(defn set-playlists [db playlists]
-  {:db (assoc db
-              :playlist-order (map :id playlists)
-              :playlists (->> playlists
-                              (reduce (fn [m {:keys [id] :as item}]
-                                        (assoc m id item))
-                                      {})))})
-
-(reg-event-fx :set-playlists
-  (fn [{db :db} [_ playlists]]
-    (set-playlists db playlists)))
-
-(reg-event-fx :set-cached-playlists
-  (fn [{db :db} [_ playlists]]
-    (when (empty? (:playlists db))
-      (set-playlists db playlists))))
+    {:spotin/invalidate-query "playlists"}))
 
 (reg-event-db :set-playlist-tracks
   (fn [db [_ playlist-id tracks]]
@@ -200,8 +181,9 @@
     {id arg}))
 
 (reg-event-fx :spotin/open-random-playlist
-  (fn [{db :db} _]
-    (let [playlist-id (rand-nth (:playlist-order db))]
+  [(inject-cofx :query-data "playlists")]
+  (fn [{:keys [db query-data]} _]
+    (let [playlist-id (-> query-data :items rand-nth :id)]
       (select-playlist-fx db playlist-id))))
 
 (defn set-playlist-search [db query]

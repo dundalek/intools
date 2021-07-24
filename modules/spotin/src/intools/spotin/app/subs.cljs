@@ -47,28 +47,13 @@
     (when (:is_playing status)
       (-> status :context :uri))))
 
-(reg-sub :spotin/playlists
-  (fn [db]
-    (:playlists db)))
-
 (reg-sub :spotin/playlist-tracks
   (fn [db]
     (:playlist-tracks db)))
 
-(reg-sub :spotin/playlist-order
-  (fn [db]
-    (:playlist-order db)))
-
 (reg-sub :spotin/playlist-search-query
   (fn [db]
     (:playlist-search-query db)))
-
-(reg-sub :spotin/playlists-filtered
-  :<- [:spotin/playlists]
-  :<- [:spotin/playlist-order]
-  :<- [:spotin/playlist-search-query]
-  (fn [[playlists playlist-order playlist-search-query]]
-    (search/filter-by playlist-search-query :name (map #(get playlists %) playlist-order))))
 
 (reg-sub :spotin/actions
   (fn [db]

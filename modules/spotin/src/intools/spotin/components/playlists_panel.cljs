@@ -1,8 +1,11 @@
 (ns intools.spotin.components.playlists-panel
   (:require [ink :refer [Box Spacer Text]]
             [intools.hooks :as hooks]
+            [intools.search :as search]
+            [intools.spotin.model.spotify :as spotify]
             [intools.views :refer [scroll-status uncontrolled-text-input use-selectable-list-controlled]]
-            [react]))
+            [react]
+            [react-query :refer [QueryClient QueryClientProvider useMutation useQuery useQueryClient]]))
 
 (defn playlist-item [{:keys [name]} {:keys [is-selected is-active is-highlighted]}]
   (let [props {:bold is-selected
@@ -17,10 +20,16 @@
         ;; perhaps use some speaker pictogram from unicode
        [:> Text props " >"])]))
 
-(defn playlists-panel [{:keys [focus-id selected-playlist-id playlists is-searching playback-context-uri
+(defn playlists-panel [{:keys [focus-id selected-playlist-id search-query playback-context-uri
                                on-activate on-menu on-search-change on-search-cancel]}]
-  (let [[selected-index on-select] (react/useState 0)
+  (let [query (useQuery "playlists" spotify/get-all-playlists+)
+        all-playlists (:items (.-data query))
+        playlists (react/useMemo
+                   (fn [] (search/filter-by search-query :name all-playlists))
+                   #js [all-playlists search-query])
+        [selected-index on-select] (react/useState 0)
         [selected set-selected] (react/useState #{})
+        is-searching (some? search-query)
         on-toggle (fn [{:keys [id]}]
                     (let [op (if (contains? selected id) disj conj)
                           value (op selected id)]
