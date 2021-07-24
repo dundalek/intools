@@ -119,12 +119,6 @@
   (fn [query-key]
     (.invalidateQueries @!query-client query-key)))
 
-(reg-fx :spotin/load-playlist-tracks
-  (fn [playlist-id]
-    (-> (spotify/get-playlist-tracks+ playlist-id)
-        (.then (fn [{:keys [items]}]
-                 (dispatch [:set-playlist-tracks playlist-id items]))))))
-
 (reg-fx :spotin/load-album
   (fn [album-id]
     (-> (spotify/get-album+ album-id)

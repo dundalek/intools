@@ -63,14 +63,9 @@
   (fn [_ _]
     {:spotin/invalidate-query "playlists"}))
 
-(reg-event-db :set-playlist-tracks
-  (fn [db [_ playlist-id tracks]]
-    (assoc-in db [:playlist-tracks playlist-id] tracks)))
-
 (defn select-playlist-fx [db playlist-id]
   {:db (app/router-navigate db {:name :playlist
-                                :params {:playlist-id playlist-id}})
-   :spotin/load-playlist-tracks playlist-id})
+                                :params {:playlist-id playlist-id}})})
 
 (reg-event-fx :select-playlist
   (fn [{db :db} [_ {:keys [id]}]]

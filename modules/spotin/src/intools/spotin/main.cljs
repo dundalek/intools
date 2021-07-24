@@ -3,6 +3,7 @@
             [goog.object :as gobj]
             [ink :refer [Box Spacer Text]]
             [intools.hooks :as hooks]
+            [intools.search :as search]
             [intools.spotin.app.cofx]
             [intools.spotin.app.events]
             [intools.spotin.app.fx]
@@ -185,6 +186,13 @@
    ;;{:name "TBD Go to artist radio"}
    ;;{:name "TBD Share"}])
 
+(defn search-tracks [query tracks]
+  (->> tracks
+       (search/filter-by query (fn [{:keys [name album artists]}]
+                                 (->> (concat [name (:name album)]
+                                              (map :name artists))
+                                      (str/join " "))))))
+
 (defn library-panel []
   (let [{:keys [is-focused]} (hooks/use-focus)]
     [:> Box {:border-style "single"
@@ -300,15 +308,21 @@
                                                   :item item}]))}]))
 
 (defn playlist-tracks-panel [playlist-id]
-  (let [query (useQuery #js ["playlists" playlist-id] #(spotify/get-playlist+ playlist-id))
-        context-item (.-data query)]
-    (println context-item)
-    (let [tracks-filtered @(subscribe [:spotin/current-filtered-playlist-tracks])]
-      [main-tracks-panel {:track-item-component playlist-track-item
-                          :context-item context-item
-                          :tracks-filtered tracks-filtered
-                          :header [playlist-header {:playlist context-item
-                                                    :tracks tracks-filtered}]}])))
+  (let [search-query @(subscribe [:spotin/track-search-query])
+        query (useQuery #js ["playlists" playlist-id] #(spotify/get-playlist+ playlist-id))
+        context-item (.-data query)
+        tracks-query (useQuery #js ["playlist-tracks" playlist-id] #(spotify/get-playlist-tracks+ playlist-id))
+        all-tracks (-> tracks-query .-data :items)
+        tracks-filtered (react/useMemo
+                         #(->> all-tracks
+                               (map :track)
+                               (search-tracks search-query))
+                         #js [all-tracks search-query])]
+    [main-tracks-panel {:track-item-component playlist-track-item
+                        :context-item context-item
+                        :tracks-filtered tracks-filtered
+                        :header [playlist-header {:playlist context-item
+                                                  :tracks tracks-filtered}]}]))
 
 (defn album-tracks-panel [context-item]
   (let [tracks-filtered @(subscribe [:spotin/current-filtered-album-tracks])]

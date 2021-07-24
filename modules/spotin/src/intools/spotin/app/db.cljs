@@ -1,8 +1,7 @@
 (ns intools.spotin.app.db)
 
 (def default-db
-  {:playlist-tracks {}
-   :playlist-search-query nil
+  {:playlist-search-query nil
    :albums {}
    :album-tracks {}
    :artists {}

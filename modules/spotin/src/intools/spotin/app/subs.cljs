@@ -47,10 +47,6 @@
     (when (:is_playing status)
       (-> status :context :uri))))
 
-(reg-sub :spotin/playlist-tracks
-  (fn [db]
-    (:playlist-tracks db)))
-
 (reg-sub :spotin/playlist-search-query
   (fn [db]
     (:playlist-search-query db)))
@@ -87,13 +83,6 @@
   (fn [db]
     (:album-tracks db)))
 
-(reg-sub :spotin/current-playlist-tracks
-  :<- [:spotin/playlist-tracks]
-  :<- [:spotin/current-playlist-id]
-  (fn [[playlist-tracks playlist-id]]
-    (->> (get playlist-tracks playlist-id)
-         (map :track))))
-
 (reg-sub :spotin/current-album-tracks
   :<- [:spotin/album-tracks]
   :<- [:spotin/current-album-id]
@@ -106,12 +95,6 @@
                                  (->> (concat [name (:name album)]
                                               (map :name artists))
                                       (str/join " "))))))
-
-(reg-sub :spotin/current-filtered-playlist-tracks
-  :<- [:spotin/current-playlist-tracks]
-  :<- [:spotin/track-search-query]
-  (fn [[tracks query]]
-    (search-tracks tracks query)))
 
 (reg-sub :spotin/current-filtered-album-tracks
   :<- [:spotin/current-album-tracks]
