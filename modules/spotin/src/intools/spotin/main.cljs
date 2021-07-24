@@ -324,8 +324,16 @@
                         :header [playlist-header {:playlist context-item
                                                   :tracks tracks-filtered}]}]))
 
-(defn album-tracks-panel [context-item]
-  (let [tracks-filtered @(subscribe [:spotin/current-filtered-album-tracks])]
+(defn album-tracks-panel [album-id]
+  (let [search-query @(subscribe [:spotin/track-search-query])
+        query (useQuery #js ["albums" album-id] #(spotify/get-album+ album-id))
+        context-item (.-data query)
+        tracks-query (useQuery #js ["album-tracks" album-id] #(spotify/get-album-tracks+ album-id))
+        all-tracks (-> tracks-query .-data :items)
+        tracks-filtered (react/useMemo
+                         #(->> all-tracks
+                               (search-tracks search-query))
+                         #js [all-tracks search-query])]
     [main-tracks-panel {:track-item-component album-track-item
                         :context-item context-item
                         :tracks-filtered tracks-filtered
@@ -621,14 +629,13 @@
        (case (:name current-route)
          :playlist
          (let [context-id (-> current-route :params :playlist-id)]
-           ^{:key context-id}
+           ^{:key (str "playlist-" context-id)}
            [:f> playlist-tracks-panel context-id])
 
          :album
-         (let [context-id (-> current-route :params :album-id)
-               context-item @(subscribe [:spotin/album-by-id context-id])]
-           ^{:key context-id}
-           [album-tracks-panel context-item])
+         (let [context-id (-> current-route :params :album-id)]
+           ^{:key (str "album-" context-id)}
+           [:f> album-tracks-panel context-id])
 
          :artist
          [artist-panel {:artist @(subscribe [:spotin/artist-by-id (-> current-route :params :artist-id)])}]

@@ -266,7 +266,8 @@
   (delete+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id) "/followers")))
 
 (defn get-album+ [album-id]
-  (cached-get+ (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id))))
+  (-> (get+ (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id)))
+      (.then (fn [body] (js->clj body :keywordize-keys true)))))
 
 (defn get-album-tracks+ [album-id]
   ;; TODO use paginated-get+

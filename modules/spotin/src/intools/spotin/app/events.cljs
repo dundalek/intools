@@ -73,8 +73,7 @@
 
 (defn open-album-fx [db album-id]
   {:db (app/router-navigate db {:name :album
-                                :params {:album-id album-id}})
-   :spotin/load-album album-id})
+                                :params {:album-id album-id}})})
 
 (reg-event-fx :spotin/open-track-album
   (fn [{db :db} [_ {:keys [item]}]]
@@ -83,14 +82,6 @@
 (reg-event-fx :spotin/open-album
   (fn [{db :db} [_ {:keys [item]}]]
     (open-album-fx db (:id item))))
-
-(reg-event-db :spotin/set-album
-  (fn [db [_ album-id album]]
-    (assoc-in db [:albums album-id] album)))
-
-(reg-event-db :spotin/set-album-tracks
-  (fn [db [_ album-id tracks]]
-    (assoc-in db [:album-tracks album-id] tracks)))
 
 (defn open-artist-fx [db artist-id]
   {:db (app/router-navigate db {:name :artist

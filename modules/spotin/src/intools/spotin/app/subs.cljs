@@ -24,10 +24,6 @@
   (fn [db]
     (:confirmation-modal db)))
 
-(reg-sub :spotin/album-by-id
-  (fn [db [_ album-id]]
-    (-> db :albums (get album-id))))
-
 (reg-sub :spotin/artist-by-id
   (fn [db [_ artist-id]]
     (-> db :artists (get artist-id))))
@@ -78,29 +74,6 @@
   :<- [:spotin/current-route]
   (fn [route]
     (-> route :params :album-id)))
-
-(reg-sub :spotin/album-tracks
-  (fn [db]
-    (:album-tracks db)))
-
-(reg-sub :spotin/current-album-tracks
-  :<- [:spotin/album-tracks]
-  :<- [:spotin/current-album-id]
-  (fn [[album-tracks album-id]]
-    (get album-tracks album-id)))
-
-(defn search-tracks [tracks query]
-  (->> tracks
-       (search/filter-by query (fn [{:keys [name album artists]}]
-                                 (->> (concat [name (:name album)]
-                                              (map :name artists))
-                                      (str/join " "))))))
-
-(reg-sub :spotin/current-filtered-album-tracks
-  :<- [:spotin/current-album-tracks]
-  :<- [:spotin/track-search-query]
-  (fn [[tracks query]]
-    (search-tracks tracks query)))
 
 (reg-sub :spotin/devices-menu
   (fn [db]
