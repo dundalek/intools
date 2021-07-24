@@ -2,7 +2,6 @@
 
 (def default-db
   {:playlist-search-query nil
-   :artists {}
    :actions nil
    :actions-search-query nil
    :track-search-query nil

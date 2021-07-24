@@ -421,8 +421,15 @@
        (map (comp last val))
        (sort-by :release_date #(compare %2 %1))))
 
-(defn artist-panel [{:keys [artist]}]
-  (let [{:keys [artist albums top-tracks related-artists]} artist
+(defn artist-panel [artist-id]
+  (let [artist-query (useQuery #js ["artists" artist-id] #(spotify/get-artist+ artist-id))
+        artist (.-data artist-query)
+        albums-query (useQuery #js ["artist-albums" artist-id] #(spotify/get-artist-albums+ artist-id))
+        albums (-> albums-query .-data :items)
+        top-tracks-query (useQuery #js ["artist-top-tracks" artist-id] #(spotify/get-artist-top-tracks+ artist-id))
+        top-tracks (-> top-tracks-query .-data :tracks)
+        related-artists-query (useQuery #js ["artist-related-artists" artist-id] #(spotify/get-artist-related-artists+ artist-id))
+        related-artists (-> related-artists-query .-data :artists)
         groups (group-by :album_group albums)]
     [:> Box {:flex-direction "column"
              :flex-grow 1}
@@ -627,19 +634,9 @@
                                                    (dispatch [:spotin/dispatch-fx :playlist-play playlist])
                                                    (dispatch [:select-playlist playlist]))))}]])
        (case (:name current-route)
-         :playlist
-         (let [context-id (-> current-route :params :playlist-id)]
-           ^{:key (str "playlist-" context-id)}
-           [:f> playlist-tracks-panel context-id])
-
-         :album
-         (let [context-id (-> current-route :params :album-id)]
-           ^{:key (str "album-" context-id)}
-           [:f> album-tracks-panel context-id])
-
-         :artist
-         [artist-panel {:artist @(subscribe [:spotin/artist-by-id (-> current-route :params :artist-id)])}]
-
+         :playlist [:f> playlist-tracks-panel (-> current-route :params :playlist-id)]
+         :album [:f> album-tracks-panel (-> current-route :params :album-id)]
+         :artist [:f> artist-panel (-> current-route :params :artist-id)]
          nil)]
       #_[playback-status-bar]
       [shortcuts-bar {:actions shortcuts-bar-actions}]]]))

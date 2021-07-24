@@ -118,19 +118,3 @@
 (reg-fx :spotin/invalidate-query
   (fn [query-key]
     (.invalidateQueries @!query-client query-key)))
-
-(reg-fx :spotin/load-artist
-  (fn [artist-id]
-    (-> (spotify/get-artist+ artist-id)
-        (.then (fn [body]
-                 (dispatch [:spotin/set-artist artist-id
-                            (js->clj body :keywordize-keys true)]))))
-    (-> (spotify/get-artist-albums+ artist-id)
-        (.then (fn [{:keys [items]}]
-                 (dispatch [:spotin/set-artist-albums artist-id items]))))
-    (-> (spotify/get-artist-top-tracks+ artist-id)
-        (.then (fn [{:keys [tracks]}]
-                 (dispatch [:spotin/set-artist-top-tracks artist-id tracks]))))
-    (-> (spotify/get-artist-related-artists+ artist-id)
-        (.then (fn [{:keys [artists]}]
-                 (dispatch [:spotin/set-artist-related-artists artist-id artists]))))))

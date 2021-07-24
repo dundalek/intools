@@ -24,10 +24,6 @@
   (fn [db]
     (:confirmation-modal db)))
 
-(reg-sub :spotin/artist-by-id
-  (fn [db [_ artist-id]]
-    (-> db :artists (get artist-id))))
-
 (reg-sub :spotin/playback-status
   (fn [db]
     (:playback-status db)))

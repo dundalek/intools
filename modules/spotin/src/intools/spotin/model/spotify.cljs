@@ -275,20 +275,21 @@
       (.then (fn [body] (js->clj body :keywordize-keys true)))))
 
 (defn get-artist+ [artist-id]
-  (cached-get+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id))))
+  (-> (get+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id)))
+      (.then (fn [body] (js->clj body :keywordize-keys true)))))
 
 (defn get-artist-albums+ [artist-id]
   ;; TODO use paginated-get+
   ;; TODO include appears_on,compilation album groups later, needs thinking about how to fit them in the UI
-  (-> (cached-get+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/albums?limit=50&include_groups=album,single"))
+  (-> (get+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/albums?limit=50&include_groups=album,single"))
       (.then (fn [body] (js->clj body :keywordize-keys true)))))
 
 (defn get-artist-top-tracks+ [artist-id]
-  (-> (cached-get+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/top-tracks?market=from_token"))
+  (-> (get+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/top-tracks?market=from_token"))
       (.then (fn [body] (js->clj body :keywordize-keys true)))))
 
 (defn get-artist-related-artists+ [artist-id]
-  (-> (cached-get+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/related-artists"))
+  (-> (get+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/related-artists"))
       (.then (fn [body] (js->clj body :keywordize-keys true)))))
 
 (defn get-player+ []
