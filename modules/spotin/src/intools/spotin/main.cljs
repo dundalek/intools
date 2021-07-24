@@ -46,12 +46,10 @@
     :event [:spotin/dispatch-fx :previous]}
    {:id :shuffle
     :name "shuffle"
-    :shortcut "s"
-    :event [:spotin/dispatch-fx :shuffle]}
+    :shortcut "s"}
    {:id :repeat
     :name "repeat"
-    :shortcut "p"
-    :event [:spotin/dispatch-fx :repeat]}
+    :shortcut "p"}
    {:id :spotin/open-currently-playing
     :name "currently playing"
     :shortcut "."
@@ -578,6 +576,14 @@
                                                        :value-path volume-path
                                                        :mutate-fn spotify/player-volume+
                                                        :update-fn volume-down})
+        shuffle-mutation (use-optimistic-mutation {:query-key "player"
+                                                   :value-path [:shuffle_state]
+                                                   :mutate-fn spotify/player-shuffle+
+                                                   :update-fn not})
+        repeat-mutation (use-optimistic-mutation {:query-key "player"
+                                                  :value-path [:repeat_state]
+                                                  :mutate-fn spotify/player-repeat+
+                                                  :update-fn spotify/repeat-state-transition})
         dispatch-action (fn [{:keys [id event arg] :as action}]
                           (if event
                             (dispatch (conj event arg))
@@ -592,6 +598,8 @@
                               :spotin/player-seek-backward (.mutate seek-backward-mutation)
                               :spotin/player-volume-up (.mutate volume-up-mutation)
                               :spotin/player-volume-down (.mutate volume-down-mutation)
+                              :shuffle (.mutate shuffle-mutation)
+                              :repeat (.mutate repeat-mutation)
                               (dispatch [:run-action action]))))]
 
     (ink/useInput

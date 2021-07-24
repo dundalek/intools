@@ -36,12 +36,6 @@
 (reg-fx :previous
   (fn [_] (with-playback-refresh+ spotify/player-previous+)))
 
-(reg-fx :shuffle
-  (fn [_] (with-playback-refresh+ spotify/player-toggle-shuffle+)))
-
-(reg-fx :repeat
-  (fn [_] (with-playback-refresh+ spotify/player-toggle-repeat+)))
-
 (reg-fx :playlist-play
   (fn [arg] (with-playback-refresh+ #(spotify/player-play+ {:context_uri (:uri arg)}))))
 
