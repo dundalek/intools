@@ -18,8 +18,8 @@
        (take 50)
        (shuffle)))
 
-(defn create-mixed-playlist+ [playlists]
-  (-> (map spotify/get-playlist-tracks+ (map :id playlists))
+(defn create-mixed-playlist+ [playlist-ids]
+  (-> (map spotify/get-playlist-tracks+ playlist-ids)
       (js/Promise.all)
       (.then (fn [bodies]
                (let [track-uris (->> bodies
@@ -28,8 +28,9 @@
                                      (map #(get-in % [:track :uri])))]
                  (.then (spotify/user-id+)
                         (fn [user-id]
-                          (.then (spotify/create-playlist+ user-id {:name (str "Generated-" (+ 100 (rand-int 900)))
-                                                                    :description (str "Generated from: " (str/join ", " (map :name playlists)))})
+                          (.then (spotify/create-playlist+ user-id {:name (str "Generated-" (+ 100 (rand-int 900)))})
+                                                                    ;; TODO: fix description - will need to fetch playlists for their name
+                                                                    ;;:description (str "Generated from: " (str/join ", " (map :name playlists)))})
                                  (fn [^js body]
                                    (let [playlist-id (.-id body)]
                                      (spotify/authorized-post+ (str "https://api.spotify.com/v1/playlists/" playlist-id "/tracks")

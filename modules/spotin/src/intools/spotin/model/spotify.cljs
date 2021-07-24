@@ -241,6 +241,10 @@
                                {:items @!items}))))))]
       (fetch-page+ initial-url))))
 
+(defn get-playlist+ [playlist-id]
+  (-> (get+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id)))
+      (.then (fn [body] (js->clj body :keywordize-keys true)))))
+
 (defn get-all-playlists+ []
   (paginated-get+ "https://api.spotify.com/v1/me/playlists?limit=50"))
 

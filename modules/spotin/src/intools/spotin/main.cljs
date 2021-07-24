@@ -299,13 +299,16 @@
                                                  {:context context-item
                                                   :item item}]))}]))
 
-(defn playlist-tracks-panel [context-item]
-  (let [tracks-filtered @(subscribe [:spotin/current-filtered-playlist-tracks])]
-    [main-tracks-panel {:track-item-component playlist-track-item
-                        :context-item context-item
-                        :tracks-filtered tracks-filtered
-                        :header [playlist-header {:playlist context-item
-                                                  :tracks tracks-filtered}]}]))
+(defn playlist-tracks-panel [playlist-id]
+  (let [query (useQuery #js ["playlists" playlist-id] #(spotify/get-playlist+ playlist-id))
+        context-item (.-data query)]
+    (println context-item)
+    (let [tracks-filtered @(subscribe [:spotin/current-filtered-playlist-tracks])]
+      [main-tracks-panel {:track-item-component playlist-track-item
+                          :context-item context-item
+                          :tracks-filtered tracks-filtered
+                          :header [playlist-header {:playlist context-item
+                                                    :tracks tracks-filtered}]}])))
 
 (defn album-tracks-panel [context-item]
   (let [tracks-filtered @(subscribe [:spotin/current-filtered-album-tracks])]
@@ -473,7 +476,7 @@
   #_(hooks/use-fullscreen)
   (let [app (ink/useApp)
         size (hooks/use-window-size)
-        {:keys [playlists actions active-input-panel playlist-search-query]} @(subscribe [:db])
+        {:keys [actions active-input-panel playlist-search-query]} @(subscribe [:db])
         actions-filtered @(subscribe [:spotin/actions-filtered])
         actions-search-query @(subscribe [:spotin/actions-search-query])
         track-search-query @(subscribe [:spotin/track-search-query])
@@ -588,9 +591,8 @@
                                 :on-search-cancel #(dispatch [:spotin/clear-playlist-search])
                                 :on-menu (fn [playlist playlist-ids]
                                            (let [playlist-actions (map #(assoc % :arg playlist) playlist-actions)
-                                                 selected-playlists (map #(get playlists %) playlist-ids)
                                                  playlists-actions (when (seq playlist-ids)
-                                                                     (map #(assoc % :arg selected-playlists) playlists-actions))
+                                                                     (map #(assoc % :arg playlist-ids) playlists-actions))
                                                  actions (concat playlist-actions
                                                                  playlists-actions
                                                                  [action-separator]
@@ -604,10 +606,9 @@
                                                    (dispatch [:select-playlist playlist]))))}]])
        (case (:name current-route)
          :playlist
-         (let [context-id (-> current-route :params :playlist-id)
-               context-item (get playlists context-id)]
+         (let [context-id (-> current-route :params :playlist-id)]
            ^{:key context-id}
-           [playlist-tracks-panel context-item])
+           [:f> playlist-tracks-panel context-id])
 
          :album
          (let [context-id (-> current-route :params :album-id)
