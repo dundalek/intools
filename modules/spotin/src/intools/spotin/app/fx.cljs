@@ -25,17 +25,7 @@
                                  ;; TODO open the device picker when multiple devices are listed
                                  (throw err)))))
                   (throw err))))
-      (.finally #(dispatch [:spotin/refresh-playback-status]))))
-
-(reg-fx :spotin/fetch-playback-status
-  (fn [request-id]
-    (-> (spotify/get-player+)
-        (.then (fn [body]
-                 (let [status (js->clj body :keywordize-keys true)]
-                   (dispatch [:spotin/set-playback-status status request-id]))))
-        (.catch (fn [e]
-                  (dispatch [:spotin/clear-playback-request-id request-id])
-                  (throw e))))))
+      (.finally #(.invalidateQueries @!query-client "player"))))
 
 (reg-fx :play-pause
   (fn [_] (with-playback-refresh+ spotify/player-play-pause+)))
@@ -81,24 +71,6 @@
 (reg-fx :spotin/player-transfer
   (fn [device-id]
     (with-playback-refresh+ #(spotify/player-transfer+ device-id))))
-
-(reg-fx :spotin/player-volume
-  (fn [{:keys [volume-percent request-id]}]
-    (-> (spotify/player-volume+ volume-percent)
-        (.finally (fn []
-                    ;; There does not seem to be Read-your-writes consistency,
-                    ;; delay for a second before trying to fetch status update
-                    (js/setTimeout #(dispatch [:spotin/update-playback-status request-id])
-                                   1000))))))
-
-(reg-fx :spotin/player-seek
-  (fn [{:keys [progress request-id]}]
-    (-> (spotify/player-seek+ progress)
-        (.finally (fn []
-                    ;; There does not seem to be Read-your-writes consistency,
-                    ;; delay for a second before trying to fetch status update
-                    (js/setTimeout #(dispatch [:spotin/update-playback-status request-id])
-                                   1000))))))
 
 (reg-fx :playlist-share
   (fn [arg] (js/console.log "Playlist URI:" (:uri arg))))

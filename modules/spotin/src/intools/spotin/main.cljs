@@ -58,20 +58,16 @@
     :event [:spotin/open-currently-playing]}
    {:id :spotin/player-volume-up
     :name "volume up 10%"
-    :shortcut "+"
-    :event [:spotin/player-volume-up]}
+    :shortcut "+"}
    {:id :spotin/player-volume-down
     :name "volume down 10%"
-    :shortcut "-"
-    :event [:spotin/player-volume-down]}
+    :shortcut "-"}
    {:id :spotin/player-seek-forward
     :name "seek forward 10s"
-    :shortcut ">"
-    :event [:spotin/player-seek-forward]}
+    :shortcut ">"}
    {:id :spotin/player-seek-backward
     :name "seek back 10s"
-    :shortcut "<"
-    :event [:spotin/player-seek-backward]}
+    :shortcut "<"}
    {:id :spotin/devices
     :name "devices"
     :shortcut "e"
@@ -193,6 +189,9 @@
                                               (map :name artists))
                                       (str/join " "))))))
 
+(defn use-player-query []
+  (useQuery "player" spotify/get-player+ #js {:refetchInterval 5000}))
+
 (defn library-panel []
   (let [{:keys [is-focused]} (hooks/use-focus)]
     [:> Box {:border-style "single"
@@ -228,8 +227,10 @@
                                                  (when on-cancel (on-cancel))))]))
 
 (defn playback-status-bar []
-  [:f> status-bar {:playback @(subscribe [:spotin/playback-status])
-                   :pending-requests @(subscribe [:spotin/pending-requests])}])
+  (let [query (use-player-query)
+        playback (.-data query)]
+    [:f> status-bar {:playback playback
+                     :pending-requests @(subscribe [:spotin/pending-requests])}]))
 
 (defn device-item [{:keys [name type is_active]} {:keys [is-selected]}]
   [:> Box
@@ -286,7 +287,8 @@
     [:f> error-alert* err]))
 
 (defn main-tracks-panel [{:keys [header context-item tracks-filtered track-item-component]}]
-  (let [playback-item-uri @(subscribe [:spotin/playback-item-uri])
+  (let [player-query (use-player-query)
+        playback-item-uri (-> player-query .-data :item :uri)
         track-search-query @(subscribe [:spotin/track-search-query])]
     [:f> tracks-panel {:focus-id "tracks-panel"
                        :header header
@@ -318,11 +320,11 @@
                                (map :track)
                                (search-tracks search-query))
                          #js [all-tracks search-query])]
-    [main-tracks-panel {:track-item-component playlist-track-item
-                        :context-item context-item
-                        :tracks-filtered tracks-filtered
-                        :header [playlist-header {:playlist context-item
-                                                  :tracks tracks-filtered}]}]))
+    [:f> main-tracks-panel {:track-item-component playlist-track-item
+                            :context-item context-item
+                            :tracks-filtered tracks-filtered
+                            :header [playlist-header {:playlist context-item
+                                                      :tracks tracks-filtered}]}]))
 
 (defn album-tracks-panel [album-id]
   (let [search-query @(subscribe [:spotin/track-search-query])
@@ -334,10 +336,10 @@
                          #(->> all-tracks
                                (search-tracks search-query))
                          #js [all-tracks search-query])]
-    [main-tracks-panel {:track-item-component album-track-item
-                        :context-item context-item
-                        :tracks-filtered tracks-filtered
-                        :header [album-header {:album context-item}]}]))
+    [:f> main-tracks-panel {:track-item-component album-track-item
+                            :context-item context-item
+                            :tracks-filtered tracks-filtered
+                            :header [album-header {:album context-item}]}]))
 
 (defn artist-item [{:keys [name followers]} {:keys [is-selected]}]
   [:> Box
@@ -501,6 +503,42 @@
                                             (dispatch [:spotin/open-artist {:item item
                                                                             :context artist}]))}]]]))
 
+(defn use-optimistic-mutation [{:keys [query-key value-path mutate-fn update-fn]}]
+  (let [mutation (useMutation
+                  mutate-fn
+                  #js{:onMutate (fn [new-progress]
+                                  (let [current (.getQueryData @!query-client query-key)
+                                        optimistic (assoc-in current value-path new-progress)]
+                                    (.cancelQueries @!query-client query-key)
+                                    (.setQueryData @!query-client query-key optimistic)))
+                      :onSettled (fn []
+                                    ;; Count 1 means to only invalidate if we are the last mutation
+                                   (when (= (.isMutating @!query-client) 1)
+                                      ;; Playback API does not seem to have Read-your-writes consistency,
+                                      ;; delay for a second before trying to fetch status update
+                                     (js/setTimeout (fn []
+                                                      (when (= (.isMutating @!query-client) 0)
+                                                        (.cancelQueries @!query-client query-key)
+                                                        (.invalidateQueries @!query-client query-key)))
+                                                    1000)))})
+        mutate (.-mutate mutation)
+        mutate-update (react/useCallback
+                       (fn []
+                         (let [current (-> (.getQueryData @!query-client query-key)
+                                           (get-in value-path))]
+                           (mutate (update-fn current))))
+                       #js [mutate])]
+    (set! (.-mutate mutation) mutate-update)
+    mutation))
+
+(def volume-path [:device :volume_percent])
+
+(defn volume-up [value]
+  (Math/min 100 (+ value 10)))
+
+(defn volume-down [value]
+  (Math/max 0 (- value 10)))
+
 (defn app []
   #_(hooks/use-fullscreen)
   (let [app (ink/useApp)
@@ -510,7 +548,6 @@
         actions-search-query @(subscribe [:spotin/actions-search-query])
         track-search-query @(subscribe [:spotin/track-search-query])
         current-route @(subscribe [:spotin/current-route])
-        playback-context-uri @(subscribe [:spotin/playback-context-uri])
         confirmation-modal-open? (some? @(subscribe [:spotin/confirmation-modal]))
         devices-menu-open? @(subscribe [:spotin/devices-menu])
         focused-component-id (cond
@@ -520,10 +557,42 @@
                                active-input-panel "input-bar")
         force-focus (not= focused-component-id "error-alert")
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id
-                                                                                      :force force-focus})]
-    (hooks/use-interval
-     #(dispatch [:spotin/refresh-playback-status])
-     5000)
+                                                                                      :force force-focus})
+        player-query (use-player-query)
+        playback-context-uri (let [status (.-data player-query)]
+                               (when (:is_playing status)
+                                 (-> status :context :uri)))
+        seek-forward-mutation (use-optimistic-mutation {:query-key "player"
+                                                        :value-path [:progress_ms]
+                                                        :mutate-fn spotify/player-seek+
+                                                        :update-fn #(+ % 10000)})
+        seek-backward-mutation (use-optimistic-mutation {:query-key "player"
+                                                         :value-path [:progress_ms]
+                                                         :mutate-fn spotify/player-seek+
+                                                         :update-fn #(-> % (- 10000) (Math/max 0))})
+        volume-up-mutation (use-optimistic-mutation {:query-key "player"
+                                                     :value-path volume-path
+                                                     :mutate-fn spotify/player-volume+
+                                                     :update-fn volume-up})
+        volume-down-mutation (use-optimistic-mutation {:query-key "player"
+                                                       :value-path volume-path
+                                                       :mutate-fn spotify/player-volume+
+                                                       :update-fn volume-down})
+        dispatch-action (fn [{:keys [id event arg] :as action}]
+                          (if event
+                            (dispatch (conj event arg))
+                            (case id
+                              :playlist-rename (dispatch [:playlist-rename arg])
+                              :playlist-edit-description (dispatch [:playlist-edit-description arg])
+                              :playlist-unfollow (dispatch [:spotin/open-confirmation-modal
+                                                            {:title "Delete playlist"
+                                                             :description (str "Are you sure you want to delete playlist '" (:name arg) "'?")
+                                                             :on-submit #(dispatch [:playlist-unfollow (:id arg)])}])
+                              :spotin/player-seek-forward (.mutate seek-forward-mutation)
+                              :spotin/player-seek-backward (.mutate seek-backward-mutation)
+                              :spotin/player-volume-up (.mutate volume-up-mutation)
+                              :spotin/player-volume-down (.mutate volume-down-mutation)
+                              (dispatch [:run-action action]))))]
 
     (ink/useInput
      (fn [input key]
@@ -549,100 +618,94 @@
                    search-action? (and actions-focused? (= shortcut "/"))]
                (when (and actions-focused? (not search-action?))
                  (dispatch [:close-action-menu]))
-               (cond
-                 ;; override / to search in action menu - this is a bit hacky without event propagation
-                 search-action? (dispatch [:spotin/set-actions-search ""])
-                 event (dispatch (conj event arg))
-                 :else (dispatch [:run-action action]))))))))
-    [:> QueryClientProvider {:client @!query-client}
-     [:> Box {:width (:cols size)
-              :height (dec (:rows size))
-              :flex-direction "column"}
-      [error-alert]
-      [confirmation-modal]
-      (case (:type active-input-panel)
-        :playlist-rename
-        (let [{:keys [id name]} (:arg active-input-panel)]
-          [:f> input-bar {:focus-id "input-bar"
-                          :label (str "Rename playlist '" name "':")
-                          :default-value name
-                          :on-submit (fn [value]
-                                       ;; TODO invalidate current playlist via rf fx
-                                       (-> (spotify/playlist-rename+ id value)
-                                           (.then #(dispatch [:spotin/refresh-playlists])))
-                                       (dispatch [:close-input-panel]))
-                          :on-cancel #(dispatch [:close-input-panel])}])
-        :playlist-edit-description
-        (let [{:keys [id name description]} (:arg active-input-panel)]
-          [:f> input-bar {:focus-id "input-bar"
-                          :label (str "Edit description for playlist '" name "':")
-                          :default-value description
-                          :on-submit (fn [value]
-                                      ;; TODO invalidate current playlist via rf fx
-                                       (-> (spotify/playlist-change-description+ id value)
-                                           (.then #(dispatch [:spotin/refresh-playlists])))
-                                       (dispatch [:close-input-panel]))
-                          :on-cancel #(dispatch [:close-input-panel])}])
+               ;; override / to search in action menu - this is a bit hacky without event propagation
+               (if search-action?
+                 (dispatch [:spotin/set-actions-search ""])
+                 (dispatch-action action))))))))
 
-        nil)
-      [:> Box {:flex-grow 1}
-       (when devices-menu-open?
-         [:f> devices-menu])
-       (when actions
-         [:f> action-menu
-          {:actions actions-filtered
-           :is-searching (some? actions-search-query)
-           :width 21
-           :on-search-change #(dispatch [:spotin/set-actions-search %])
-           :on-search-cancel #(dispatch [:spotin/set-actions-search nil])
-           :on-activate (fn [{:keys [id arg event] :as action}]
-                          (dispatch [:close-action-menu])
-                          (if event
-                            (dispatch (conj event arg))
-                            (case id
-                              :playlist-rename (dispatch [:playlist-rename arg])
-                              :playlist-edit-description (dispatch [:playlist-edit-description arg])
-                              :playlist-unfollow (dispatch [:spotin/open-confirmation-modal
-                                                            {:title "Delete playlist"
-                                                             :description (str "Are you sure you want to delete playlist '" (:name arg) "'?")
-                                                             :on-submit #(dispatch [:playlist-unfollow (:id arg)])}])
-                              (dispatch [:run-action action]))))
-           :on-cancel #(dispatch [:close-action-menu])}])
-       (when-not devices-menu-open?
-         [:> Box {:width sidepanel-width
-                  :flex-direction "column"}
-          #_[:f> library-panel]
-          [:f> playlists-panel {:focus-id "playlists-panel"
-                                :selected-playlist-id (-> current-route :params :playlist-id)
-                                :search-query playlist-search-query
-                                :playback-context-uri playback-context-uri
-                                :on-search-change #(dispatch [:spotin/set-playlist-search %])
-                                :on-search-cancel #(dispatch [:spotin/clear-playlist-search])
-                                :on-menu (fn [playlist playlist-ids]
-                                           (let [playlist-actions (map #(assoc % :arg playlist) playlist-actions)
-                                                 playlists-actions (when (seq playlist-ids)
-                                                                     (map #(assoc % :arg playlist-ids) playlists-actions))
-                                                 actions (concat playlist-actions
-                                                                 playlists-actions
-                                                                 [action-separator]
-                                                                 player-actions)]
-                                             (dispatch [:open-action-menu actions])))
-                                :on-activate (fn [playlist]
-                                               (let [{:keys [name params]} current-route]
-                                                 (if (and (= name :playlist)
-                                                          (= (:playlist-id params) (:id playlist)))
-                                                   (dispatch [:spotin/dispatch-fx :playlist-play playlist])
-                                                   (dispatch [:select-playlist playlist]))))}]])
-       (case (:name current-route)
-         :playlist [:f> playlist-tracks-panel (-> current-route :params :playlist-id)]
-         :album [:f> album-tracks-panel (-> current-route :params :album-id)]
-         :artist [:f> artist-panel (-> current-route :params :artist-id)]
-         nil)]
-      #_[playback-status-bar]
-      [shortcuts-bar {:actions shortcuts-bar-actions}]]]))
+    [:> Box {:width (:cols size)
+             :height (dec (:rows size))
+             :flex-direction "column"}
+     [error-alert]
+     [confirmation-modal]
+     (case (:type active-input-panel)
+       :playlist-rename
+       (let [{:keys [id name]} (:arg active-input-panel)]
+         [:f> input-bar {:focus-id "input-bar"
+                         :label (str "Rename playlist '" name "':")
+                         :default-value name
+                         :on-submit (fn [value]
+                                      ;; TODO invalidate current playlist via rf fx
+                                      (-> (spotify/playlist-rename+ id value)
+                                          (.then #(dispatch [:spotin/refresh-playlists])))
+                                      (dispatch [:close-input-panel]))
+                         :on-cancel #(dispatch [:close-input-panel])}])
+       :playlist-edit-description
+       (let [{:keys [id name description]} (:arg active-input-panel)]
+         [:f> input-bar {:focus-id "input-bar"
+                         :label (str "Edit description for playlist '" name "':")
+                         :default-value description
+                         :on-submit (fn [value]
+                                     ;; TODO invalidate current playlist via rf fx
+                                      (-> (spotify/playlist-change-description+ id value)
+                                          (.then #(dispatch [:spotin/refresh-playlists])))
+                                      (dispatch [:close-input-panel]))
+                         :on-cancel #(dispatch [:close-input-panel])}])
+
+       nil)
+     [:> Box {:flex-grow 1}
+      (when devices-menu-open?
+        [:f> devices-menu])
+      (when actions
+        [:f> action-menu
+         {:actions actions-filtered
+          :is-searching (some? actions-search-query)
+          :width 21
+          :on-search-change #(dispatch [:spotin/set-actions-search %])
+          :on-search-cancel #(dispatch [:spotin/set-actions-search nil])
+          :on-activate (fn [action]
+                         (dispatch [:close-action-menu])
+                         (dispatch-action action))
+          :on-cancel #(dispatch [:close-action-menu])}])
+      (when-not devices-menu-open?
+        [:> Box {:width sidepanel-width
+                 :flex-direction "column"}
+         #_[:f> library-panel]
+         [:f> playlists-panel {:focus-id "playlists-panel"
+                               :selected-playlist-id (-> current-route :params :playlist-id)
+                               :search-query playlist-search-query
+                               :playback-context-uri playback-context-uri
+                               :on-search-change #(dispatch [:spotin/set-playlist-search %])
+                               :on-search-cancel #(dispatch [:spotin/clear-playlist-search])
+                               :on-menu (fn [playlist playlist-ids]
+                                          (let [playlist-actions (map #(assoc % :arg playlist) playlist-actions)
+                                                playlists-actions (when (seq playlist-ids)
+                                                                    (map #(assoc % :arg playlist-ids) playlists-actions))
+                                                actions (concat playlist-actions
+                                                                playlists-actions
+                                                                [action-separator]
+                                                                player-actions)]
+                                            (dispatch [:open-action-menu actions])))
+                               :on-activate (fn [playlist]
+                                              (let [{:keys [name params]} current-route]
+                                                (if (and (= name :playlist)
+                                                         (= (:playlist-id params) (:id playlist)))
+                                                  (dispatch [:spotin/dispatch-fx :playlist-play playlist])
+                                                  (dispatch [:select-playlist playlist]))))}]])
+      (case (:name current-route)
+        :playlist [:f> playlist-tracks-panel (-> current-route :params :playlist-id)]
+        :album [:f> album-tracks-panel (-> current-route :params :album-id)]
+        :artist [:f> artist-panel (-> current-route :params :artist-id)]
+        nil)]
+     [:f> playback-status-bar]
+     [shortcuts-bar {:actions shortcuts-bar-actions}]]))
+
+(defn app-wrapper []
+  [:> QueryClientProvider {:client @!query-client}
+   [:f> app]])
 
 (defn render []
-  (reset! !app (ink/render (r/as-element [:f> app]))))
+  (reset! !app (ink/render (r/as-element [app-wrapper]))))
 
 (defn -main []
   (when-some [missing-credentials (->> ["SPOTIFY_CLIENT_ID" "SPOTIFY_CLIENT_SECRET" "SPOTIFY_REFRESH_TOKEN"]
@@ -663,4 +726,4 @@
 
 (defn ^:dev/after-load reload! []
   (rf/clear-subscription-cache!)
-  (.rerender ^js/InkInstance @!app (r/as-element [:f> app])))
+  (.rerender ^js/InkInstance @!app (r/as-element [app-wrapper])))

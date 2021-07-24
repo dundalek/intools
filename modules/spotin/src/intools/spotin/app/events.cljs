@@ -33,32 +33,6 @@
   (fn [db _]
     (app/router-back db)))
 
-(defn- expected-request? [{:keys [playback-request-id] :as _db} request-id]
-  (or (not playback-request-id)
-      (= playback-request-id request-id)))
-
-(reg-event-fx :spotin/refresh-playback-status
-  (fn [{db :db}]
-    (when (expected-request? db nil)
-      {:spotin/fetch-playback-status nil})))
-
-(reg-event-fx :spotin/update-playback-status
-  (fn [{db :db} [_ request-id]]
-    (when (expected-request? db request-id)
-      {:spotin/fetch-playback-status request-id})))
-
-(reg-event-db :spotin/clear-playback-request-id
-  (fn [db [_ request-id]]
-    (when (expected-request? db request-id)
-      (assoc db :playback-request-id nil))))
-
-(reg-event-db :spotin/set-playback-status
-  (fn [db [_ status request-id]]
-    (when (expected-request? db request-id)
-      (assoc db
-             :playback-request-id nil
-             :playback-status status))))
-
 (reg-event-fx :spotin/refresh-playlists
   (fn [_ _]
     {:spotin/invalidate-query "playlists"}))
@@ -97,16 +71,17 @@
     (open-artist-fx db (:id item))))
 
 (reg-event-fx :spotin/open-currently-playing
-  (fn [{db :db}]
+  [(inject-cofx :query-data "player")]
+  (fn [{:keys [db query-data]}]
     ;; TODO show error alert for no context or unexpected context type
-    (if-some [{:keys [type uri]} (-> db :playback-status :context)]
+    (if-some [{:keys [type uri]} (-> query-data :context)]
       (let [id (spotify/uri->id uri)]
         (case type
           "playlist" (select-playlist-fx db id)
           "album" (open-album-fx db id)
           "artist" (open-artist-fx db id)))
       ;; no context specified, try show song's album
-      (when-some [album-id (-> db :playback-status :item :album :id)]
+      (when-some [album-id (-> query-data :item :album :id)]
         (open-album-fx db album-id)))))
 
 (reg-event-db :open-action-menu
@@ -198,52 +173,3 @@
   (fn [{db :db} [_ device-id]]
     {:db (assoc db :devices-menu false)
      :spotin/player-transfer device-id}))
-
-(def volume-path [:playback-status :device :volume_percent])
-
-(defn volume-up [value]
-  (Math/min 100 (+ value 10)))
-
-(defn volume-down [value]
-  (Math/max 0 (- value 10)))
-
-(defonce !request-counter (atom 0))
-(defn update-volume-fx [db update-fn]
-  ;; TODO it would be cleaner to use co-effect for counter
-  (let [request-id (swap! !request-counter inc)
-        old-volume (get-in db volume-path)
-        new-volume (update-fn old-volume)]
-    {:db (-> db
-             (assoc-in volume-path new-volume)
-             (assoc :playback-request-id request-id))
-     :spotin/player-volume {:volume-percent new-volume
-                            :request-id request-id}}))
-
-(reg-event-fx :spotin/player-volume-up
-  (fn [{db :db}]
-    (update-volume-fx db volume-up)))
-
-(reg-event-fx :spotin/player-volume-down
-  (fn [{db :db}]
-    (update-volume-fx db volume-down)))
-
-(def progress-path [:playback-status :progress_ms])
-
-(defn seek-fx [db update-fn]
-  ;; TODO it would be cleaner to use co-effect for counter
-  (let [request-id (swap! !request-counter inc)
-        old-progress (get-in db progress-path)
-        new-progress (update-fn old-progress)]
-    {:db (-> db
-             (assoc-in progress-path new-progress)
-             (assoc :playback-request-id request-id))
-     :spotin/player-seek {:progress new-progress
-                          :request-id request-id}}))
-
-(reg-event-fx :spotin/player-seek-forward
-  (fn [{db :db}]
-    (seek-fx db #(+ % 10000))))
-
-(reg-event-fx :spotin/player-seek-backward
-  (fn [{db :db}]
-    (seek-fx db #(-> % (- 10000) (Math/max 0)))))

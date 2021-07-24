@@ -293,7 +293,8 @@
       (.then (fn [body] (js->clj body :keywordize-keys true)))))
 
 (defn get-player+ []
-  (authorized-get+ "https://api.spotify.com/v1/me/player"))
+  (-> (get+ "https://api.spotify.com/v1/me/player")
+      (.then (fn [body] (js->clj body :keywordize-keys true)))))
 
 (defn get-player-devices+ []
   (-> (authorized-get+ "https://api.spotify.com/v1/me/player/devices")
@@ -323,8 +324,8 @@
 
 (defn player-play-pause+ []
   (-> (get-player+)
-      (.then (fn [^js body]
-               (if (.-is_playing body)
+      (.then (fn [{:keys [is_playing]}]
+               (if is_playing
                  (player-pause+)
                  (player-play+))))))
 
@@ -334,8 +335,8 @@
 
 (defn player-toggle-shuffle+ []
   (-> (get-player+)
-      (.then (fn [^js body]
-               (player-shuffle+ (not (.-shuffle_state body)))))))
+      (.then (fn [{:keys [shuffle_state]}]
+               (player-shuffle+ (not shuffle_state))))))
 
 ;; repeat_state
 (def repeat-state-transition
@@ -348,8 +349,8 @@
 
 (defn player-toggle-repeat+ []
   (-> (get-player+)
-      (.then (fn [^js body]
-               (player-repeat+ (repeat-state-transition (.-repeat_state body)))))))
+      (.then (fn [{:keys [repeat_state]}]
+               (player-repeat+ (repeat-state-transition repeat_state))))))
 
 (defn player-next+ []
   (authorized-post+ "https://api.spotify.com/v1/me/player/next"))
