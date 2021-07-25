@@ -33,5 +33,5 @@
                                                                     ;;:description (str "Generated from: " (str/join ", " (map :name playlists)))})
                                  (fn [^js body]
                                    (let [playlist-id (.-id body)]
-                                     (spotify/authorized-post+ (str "https://api.spotify.com/v1/playlists/" playlist-id "/tracks")
-                                                               {:uris track-uris})))))))))))
+                                     (spotify/post+ (str "https://api.spotify.com/v1/playlists/" playlist-id "/tracks")
+                                                    {:uris track-uris})))))))))))
