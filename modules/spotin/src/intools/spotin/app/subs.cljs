@@ -3,10 +3,6 @@
             [intools.spotin.app.core :as app]
             [re-frame.core :refer [reg-sub]]))
 
-(reg-sub :db
-  (fn [db _]
-    db))
-
 (reg-sub :spotin/error
   (fn [db]
     (:error db)))
@@ -58,3 +54,7 @@
 (reg-sub :spotin/devices-menu
   (fn [db]
     (:devices-menu db)))
+
+(reg-sub :spotin/active-input-panel
+  (fn [db]
+    (:active-input-panel db)))
