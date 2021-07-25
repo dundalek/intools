@@ -1,9 +1,11 @@
 (ns intools.spotin.app.query
   (:require ["react-query/lib/core/focusManager" :refer [focusManager]]
             ["react-query/lib/core/onlineManager" :refer [onlineManager]]
-            ["react-query/lib/core/utils" :as utils]))
+            ["react-query/lib/core/utils" :as utils]
+            [intools.spotin.model.spotify :as spotify]
+            [react-query :refer [useQuery]]))
 
-(defn subscribe-noop []
+(defn- subscribe-noop []
   (fn []))
 
 (defonce !query-client
@@ -15,3 +17,6 @@
     (set! (.-subscribe onlineManager) subscribe-noop)
 
     (atom nil)))
+
+(defn use-player []
+  (useQuery "player" spotify/get-player+ #js {:refetchInterval 5000}))
