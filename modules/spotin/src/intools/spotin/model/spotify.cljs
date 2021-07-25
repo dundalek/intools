@@ -62,7 +62,7 @@
   (let [auth-options {:method "POST"
                       :url "https://accounts.spotify.com/api/token"
                       :headers {:Authorization (str "Basic "
-                                                    (-> (js/Buffer. (str client-id ":" client-secret))
+                                                    (-> (js/Buffer.from (str client-id ":" client-secret))
                                                         (.toString "base64")))}
                       :form {:grant_type "authorization_code"
                              :code code
@@ -77,7 +77,7 @@
   (let [auth-options {:method "POST"
                       :url "https://accounts.spotify.com/api/token"
                       :headers {:Authorization (str "Basic "
-                                                    (-> (js/Buffer. (str client-id ":" client-secret))
+                                                    (-> (js/Buffer.from (str client-id ":" client-secret))
                                                         (.toString "base64")))}
                       :form {:grant_type "refresh_token"
                              :refresh_token rtoken}
