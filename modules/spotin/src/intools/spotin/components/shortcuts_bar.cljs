@@ -20,7 +20,6 @@
          (map (fn [item]
                 [shortcut-item item]))
          (interpose separator)
-         (map-indexed (fn [idx item]
-                        ^{:key idx} item)))]
+         (into [:<>]))]
    separator
    [shortcut-item (last actions)]])
