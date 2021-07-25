@@ -239,12 +239,10 @@
 (defn player-pause+ []
   (put+ "https://api.spotify.com/v1/me/player/pause"))
 
-(defn player-play-pause+ []
-  (-> (get-player+)
-      (.then (fn [{:keys [is_playing]}]
-               (if is_playing
-                 (player-pause+)
-                 (player-play+))))))
+(defn player-play-pause+ [play?]
+  (if play?
+    (player-play+)
+    (player-pause+)))
 
 (defn player-shuffle+ [state]
   (put+ (str "https://api.spotify.com/v1/me/player/shuffle?state="

@@ -34,8 +34,7 @@
 (def player-actions
   [{:id :play-pause
     :name "play/pause"
-    :shortcut "z"
-    :event [:spotin/dispatch-fx :play-pause]}
+    :shortcut "z"}
    {:id :next
     :name "next"
     :shortcut "n"
@@ -586,6 +585,10 @@
                                                   :value-path [:repeat_state]
                                                   :mutate-fn spotify/player-repeat+
                                                   :update-fn spotify/repeat-state-transition})
+        play-pause-mutation (use-optimistic-mutation {:query-key "player"
+                                                      :value-path [:is_playing]
+                                                      :mutate-fn spotify/player-play-pause+
+                                                      :update-fn not})
         dispatch-action (fn [{:keys [id event arg] :as action}]
                           (if event
                             (dispatch (conj event arg))
@@ -602,6 +605,7 @@
                               :spotin/player-volume-down (.mutate volume-down-mutation)
                               :shuffle (.mutate shuffle-mutation)
                               :repeat (.mutate repeat-mutation)
+                              :play-pause (.mutate play-pause-mutation)
                               (dispatch [:run-action action]))))]
 
     (ink/useInput

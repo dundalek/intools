@@ -27,9 +27,6 @@
                   (throw err))))
       (.finally #(.invalidateQueries @!query-client "player"))))
 
-(reg-fx :play-pause
-  (fn [_] (with-playback-refresh+ spotify/player-play-pause+)))
-
 (reg-fx :next
   (fn [_] (with-playback-refresh+ spotify/player-next+)))
 
