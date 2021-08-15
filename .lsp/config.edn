@@ -1,0 +1,3 @@
+{"source-paths" ["lib/src/"
+                 "modules/spotin/src"
+                 "modules/randrin/src"]}

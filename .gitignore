@@ -10,3 +10,4 @@ build/
 .cache
 .envrc
 **/.lsp/*.db
+.nrepl-port
