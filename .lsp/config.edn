@@ -1,3 +1,9 @@
 {"source-paths" ["lib/src/"
                  "modules/spotin/src"
-                 "modules/randrin/src"]}
+                 "modules/randrin/src"]
+ :cljfmt
+ {:indents {reg-sub [[:inner 0]]
+            reg-event-db [[:inner 0]]
+            reg-fx [[:inner 0]]
+            reg-cofx [[:inner 0]]
+            reg-event-fx [[:inner 0]]}}}

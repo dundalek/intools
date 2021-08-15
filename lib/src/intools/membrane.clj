@@ -42,7 +42,7 @@
                                                                      (inc %)))
                           :up (update! update :selected #(Math/max 0 (dec %)))
                           nil))
-           (apply custom-vertical-layout
+           (apply vertical-layout
                   (for [[idx item] (map-indexed list items)]
                     (item-component item {:is-selected (= selected idx)
                                           #_(str [selected idx (= selected idx)])}))))))

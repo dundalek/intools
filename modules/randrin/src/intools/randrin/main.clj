@@ -1,10 +1,15 @@
 (ns intools.randrin.main
-  (:require [clojure.core.async :as async]
-            [intools.randrin.model :as model]
-            [intools.membrane :refer [bordered-box vertical-layout selectable-list]]
-            [membrane.component :as component :refer [defui]]
-            [membrane.lanterna :as lanterna :refer [textarea checkbox label rectangle]]
-            [membrane.ui :as ui :refer [horizontal-layout on]])
+  (:require
+   [clojure.core.async :as async]
+   [intools.membrane :refer [bordered-box vertical-layout selectable-list]]
+   [intools.randrin.app.events]
+   [intools.randrin.app.subs]
+   [intools.randrin.model :as model]
+   [membrane.component :as component :refer [defui]]
+   [membrane.lanterna :as lanterna :refer [textarea checkbox label rectangle]]
+   [membrane.re-frame :as memframe]
+   [membrane.ui :as ui :refer [horizontal-layout on]]
+   [re-frame.core :as rf :refer [reg-event-db reg-event-fx inject-cofx path after reg-sub subscribe dispatch dispatch-sync]])
   (:gen-class))
 
 (defn display-item [display {:keys [is-selected]}]
@@ -26,42 +31,23 @@
                    [1 1 1])
     (label (str "Item " item))))
 
-(def default-state {:state {:selected 0}
-                    :items (range 10)
-                    :display-list-state {:selected 0}
-                    :screen nil})
-
-(defonce todo-state (atom default-state))
-
-(comment
-  (reset! todo-state default-state))
-
-(defn update-handler [key]
-  (fn [& args]
-    (apply swap! todo-state update key args)
-    nil))
-
-(defn update-in-handler [path]
-  (fn [& args]
-    (apply swap! todo-state update-in path args)
-    nil))
-
-(defui todo-app [{:keys [screen items state display-list-state]}]
+(defn app []
   (horizontal-layout
    (vertical-layout
     (ui/with-color [1 1 1]
       (bordered-box
        (ui/with-color [0 1 0]
          (label "Title"))
-       (selectable-list {:items (:displays screen)
-                         :state display-list-state
-                         :update! (update-handler :display-list-state)
+       (selectable-list {:items @(subscribe [:randrin/displays])
+                         :state @(subscribe [:randrin/display-list-state])
+                         :update! (fn [& args]
+                                    [(into [:update :display-list-state] args)])
                          :item-component display-item}))))
    (vertical-layout
-    #_(label (pr-str display-list-state))
-    (selectable-list {:items items
-                      :state state
-                      :update! (update-handler :state)
+    (selectable-list {:items @(subscribe [:items])
+                      :state @(subscribe [:list-state])
+                      :update! (fn [& args]
+                                 [(into [:update :state] args)])
                       :item-component selectable-item})
     [(ui/with-color [0 1 0]
        #_(rectangle 10 5)
@@ -79,18 +65,19 @@
 
 (comment
   (do
-    (swap! todo-state assoc :screen (-> (model/list-screens) first))
     (def close-ch (async/chan))
-    (lanterna/run (component/make-app #'todo-app todo-state)
-                  {:in membrane.lanterna/in
-                   :out membrane.lanterna/out}))
+    (dispatch-sync [:randrin/init])
+    (lanterna/run
+     #(memframe/re-frame-app (app))
+     {:close-ch close-ch}))
 
   ;; Some time later, stop the UI. You can call `lanterna/run` again to start a new UI.
-  (async/close! close-ch))
+  (async/close! close-ch)
 
-(defn -main [& args]
-  (lanterna/run-sync (component/make-app #'todo-app todo-state)))
-  ;; (component/run-ui-sync )
-  ;; (.close System/in)
-  ;; (shutdown-agents)
+  (re-frame.subs/clear-subscription-cache!))
 
+(defn -main [& _args]
+  (dispatch-sync [:randrin/init])
+  (lanterna/run-sync #(memframe/re-frame-app (app)))
+  (.close System/in)
+  (shutdown-agents))
