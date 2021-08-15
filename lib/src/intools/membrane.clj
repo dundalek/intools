@@ -34,15 +34,15 @@
                                  elem))))
           group-elems)))))
 
-(defn selectable-list [{:keys [state update! items item-component]}]
+(defn selectable-list [{:keys [state update! items is-focused item-component]}]
   (let [{:keys [selected]} state]
-    (ui/on :key-press (fn [key]
-                        (case key
-                          :down (update! update :selected #(Math/min (dec (count items))
-                                                                     (inc %)))
-                          :up (update! update :selected #(Math/max 0 (dec %)))
-                          nil))
+    (ui/on :key-press (when is-focused
+                        (fn [key]
+                          (case key
+                            :down (update! update :selected #(Math/min (dec (count items))
+                                                                       (inc %)))
+                            :up (update! update :selected #(Math/max 0 (dec %)))
+                            nil)))
            (apply vertical-layout
                   (for [[idx item] (map-indexed list items)]
-                    (item-component item {:is-selected (= selected idx)
-                                          #_(str [selected idx (= selected idx)])}))))))
+                    (item-component item {:is-selected (and is-focused (= selected idx))}))))))

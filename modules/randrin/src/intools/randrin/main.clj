@@ -34,21 +34,21 @@
 
 (defn app []
   (horizontal-layout
+   (on :key-press
+       (fn [key]
+         (case key
+           :left [[:randrin/focus-prev]]
+           :right [[:randrin/focus-next]]
+           nil))
+       nil)
    (vertical-layout
-    (ui/with-color theme/foreground-color
-      (bordered-box
-       (ui/with-color theme/green
-         (label "Title"))
-       (selectable-list {:items @(subscribe [:randrin/displays])
-                         :state @(subscribe [:randrin/display-list-state])
-                         :update! (fn [& args]
-                                    [(into [:update :display-list-state] args)])
-                         :item-component display-item}))))
-   (vertical-layout
+    (ui/with-color theme/green
+      (label (str "Active: " @(subscribe [:randrin/focused-id]))))
     (selectable-list {:items @(subscribe [:items])
                       :state @(subscribe [:list-state])
                       :update! (fn [& args]
                                  [(into [:update :state] args)])
+                      :is-focused @(subscribe [:randrin/is-focused :action-menu])
                       :item-component selectable-item})
     [(ui/with-color theme/green
        #_(rectangle 10 5)
@@ -62,7 +62,18 @@
         (apply horizontal-layout
                (let [size (.getTerminalSize lanterna/*screen*)]
                  [(label (.getRows size))
-                  (label (.getColumns size))]))))))
+                  (label (.getColumns size))]))))
+   (vertical-layout
+    (ui/with-color theme/foreground-color
+      (bordered-box
+       (ui/with-color theme/green
+         (label "Title"))
+       (selectable-list {:items @(subscribe [:randrin/displays])
+                         :state @(subscribe [:randrin/display-list-state])
+                         :update! (fn [& args]
+                                    [(into [:update :display-list-state] args)])
+                         :is-focused @(subscribe [:randrin/is-focused :display-panel])
+                         :item-component display-item}))))))
 
 (comment
   (do

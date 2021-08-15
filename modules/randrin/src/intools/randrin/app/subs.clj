@@ -21,3 +21,18 @@
   (fn [db _]
     (:display-list-state db)))
 
+(reg-sub :randrin/focus-manager
+  (fn [db _]
+    (:focus-manager db)))
+
+(reg-sub :randrin/focused-id
+  :<- [:randrin/focus-manager]
+  (fn [focus-manager _]
+    (or (:active-id focus-manager)
+        (first (:focusables focus-manager)))))
+
+(reg-sub :randrin/is-focused
+  :<- [:randrin/focused-id]
+  (fn [focused-id [_ id]]
+    (= focused-id id)))
+
