@@ -5,6 +5,7 @@
    [intools.randrin.app.events]
    [intools.randrin.app.subs]
    [intools.randrin.model :as model]
+   [intools.randrin.theme :as theme]
    [membrane.component :as component :refer [defui]]
    [membrane.lanterna :as lanterna :refer [textarea checkbox label rectangle]]
    [membrane.re-frame :as memframe]
@@ -15,8 +16,8 @@
 (defn display-item [display {:keys [is-selected]}]
   (let [{:keys [id connected primary width height modes]} display]
     (ui/with-color (if is-selected
-                     [1 0 0]
-                     [1 1 1])
+                     theme/red
+                     theme/foreground-color)
       (horizontal-layout
        (label id)
        (when width
@@ -27,16 +28,16 @@
 
 (defn selectable-item [item {:keys [is-selected]}]
   (ui/with-color (if is-selected
-                   [1 0 0]
-                   [1 1 1])
+                   theme/red
+                   theme/foreground-color)
     (label (str "Item " item))))
 
 (defn app []
   (horizontal-layout
    (vertical-layout
-    (ui/with-color [1 1 1]
+    (ui/with-color theme/foreground-color
       (bordered-box
-       (ui/with-color [0 1 0]
+       (ui/with-color theme/green
          (label "Title"))
        (selectable-list {:items @(subscribe [:randrin/displays])
                          :state @(subscribe [:randrin/display-list-state])
@@ -49,15 +50,15 @@
                       :update! (fn [& args]
                                  [(into [:update :state] args)])
                       :item-component selectable-item})
-    [(ui/with-color [0 1 0]
+    [(ui/with-color theme/green
        #_(rectangle 10 5)
        (ui/rounded-rectangle 10 5 0))
      (ui/translate 1 1
-                   (ui/with-color [0 0 1]
+                   (ui/with-color theme/blue
                      (label "Hello")))]
-    #_(ui/with-color [1 1 1]
+    #_(ui/with-color theme/foreground-color
         (label (str "Type: " (some? lanterna/*screen*))))
-    #_(ui/with-color [1 1 1]
+    #_(ui/with-color theme/foreground-color
         (apply horizontal-layout
                (let [size (.getTerminalSize lanterna/*screen*)]
                  [(label (.getRows size))
