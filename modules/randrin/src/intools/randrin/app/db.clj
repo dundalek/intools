@@ -7,4 +7,6 @@
                  :name "World"
                  ;; TODO dynamic registration of focusables
                  :focus-manager {:focusables [:action-menu :display-panel]
-                                 :active-id nil}})
+                                 :active-id nil}
+                 :terminal-size nil
+                 :component-state {}})

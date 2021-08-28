@@ -15,6 +15,10 @@
   (fn [db [_ & args]]
     (apply update db args)))
 
+(reg-event-db :randrin/terminal-resized
+  (fn [db [_ size]]
+    (assoc db :terminal-size size)))
+
 (defn db->focusables [db]
   (-> db :focus-manager :focusables))
 

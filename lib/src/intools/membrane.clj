@@ -34,6 +34,28 @@
                                  elem))))
           group-elems)))))
 
+(defn horizontal-layout
+  [& elems]
+  (let [elems (seq elems)
+        first-elem (first elems)
+        offset-x (+ (ui/width first-elem)
+                    (ui/origin-x first-elem))]
+    (when elems
+      (loop [elems (next elems)
+             offset-x offset-x
+             group-elems [first-elem]]
+        (if elems
+          (let [elem (first elems)
+                dx (+ (ui/width elem)
+                      (ui/origin-x elem))]
+            (recur
+             (next elems)
+             (+ offset-x dx)
+             (conj group-elems
+                   (ui/translate offset-x 0
+                                 elem))))
+          group-elems)))))
+
 (defn selectable-list [{:keys [state update! items is-focused item-component]}]
   (let [{:keys [selected]} state]
     (ui/on :key-press (when is-focused

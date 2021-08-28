@@ -1,6 +1,6 @@
 {:deps
  {hyperfiddle/rcf {:git/url "https://github.com/hyperfiddle/rcf.git" :sha "278e85015db315cae3b2301b3a197f7af2affe72"}
-  com.phronemophobic/membrane {:mvn/version "0.9.27.2-beta"}
+  com.phronemophobic/membrane {:mvn/version "0.9.27.4-beta"}
   com.googlecode.lanterna/lanterna {:mvn/version "3.1.1"}
   intools/intools {:local/root "../../lib"}
   re-frame/re-frame {:mvn/version "1.2.0"}}}

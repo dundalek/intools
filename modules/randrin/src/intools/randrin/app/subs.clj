@@ -25,6 +25,10 @@
   (fn [db _]
     (:focus-manager db)))
 
+(reg-sub :randrin/component-state
+  (fn [db [_ component-id]]
+    (get-in db [:component-state component-id])))
+
 (reg-sub :randrin/focused-id
   :<- [:randrin/focus-manager]
   (fn [focus-manager _]
@@ -36,3 +40,6 @@
   (fn [focused-id [_ id]]
     (= focused-id id)))
 
+(reg-sub :randrin/terminal-size
+  (fn [db _]
+    (:terminal-size db)))
