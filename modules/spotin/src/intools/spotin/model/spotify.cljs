@@ -277,3 +277,15 @@
   (-> (get+ "https://api.spotify.com/v1/me")
       (.then (fn [^js body]
                (.-id body)))))
+
+(defn auto-select-device+ []
+  (-> (get-player-devices+)
+      (.then (fn [{:keys [devices]}]
+               (if (= (count devices) 1)
+                 (let [device-id (-> devices first :id)]
+                   (player-transfer+ device-id))
+                 (throw (js/Error. "No active player device detected.")))))))
+
+(defn playback-stopped? [playback]
+  (and (not (:is_playing playback))
+       (not (-> playback :item :name))))

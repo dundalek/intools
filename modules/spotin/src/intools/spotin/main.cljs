@@ -68,6 +68,19 @@
     (set! (.-mutate mutation) mutate-update)
     mutation))
 
+(defn use-play-pause-mutate []
+  (let [play-pause-mutation (use-optimistic-mutation {:query-key "player"
+                                                      :value-path [:is_playing]
+                                                      :mutate-fn spotify/player-play-pause+
+                                                      :update-fn not})]
+    (react/useCallback (fn []
+                         (let [playback (.getQueryData @!query-client "player")]
+                           (if (spotify/playback-stopped? playback)
+                             (-> (spotify/auto-select-device+)
+                                 ;; TODO: show device picker if auto-connect fails
+                                 (.then #(spotify/player-play+)))
+                             (.mutate play-pause-mutation)))))))
+
 (def volume-path [:device :volume_percent])
 
 (defn volume-up [value]
@@ -120,10 +133,7 @@
                                                   :value-path [:repeat_state]
                                                   :mutate-fn spotify/player-repeat+
                                                   :update-fn spotify/repeat-state-transition})
-        play-pause-mutation (use-optimistic-mutation {:query-key "player"
-                                                      :value-path [:is_playing]
-                                                      :mutate-fn spotify/player-play-pause+
-                                                      :update-fn not})
+        play-pause-mutate (use-play-pause-mutate)
         dispatch-action (fn [{:keys [id event arg] :as action}]
                           (if event
                             (dispatch (conj event arg))
@@ -140,7 +150,7 @@
                               :spotin/player-volume-down (.mutate volume-down-mutation)
                               :shuffle (.mutate shuffle-mutation)
                               :repeat (.mutate repeat-mutation)
-                              :play-pause (.mutate play-pause-mutation)
+                              :play-pause (play-pause-mutate)
                               (dispatch [:run-action action]))))]
 
     (ink/useInput

@@ -3,6 +3,7 @@
             [clojure.string :as str]
             [ink :refer [Box Text]]
             [intools.spotin.format :refer [format-duration]]
+            [intools.spotin.model.spotify :as spotify]
             [react]))
 
 (defn use-adjusted-time-progress [is_playing progress_ms duration_ms]
@@ -31,7 +32,7 @@
   (let [{:keys [is_playing progress_ms shuffle_state repeat_state device item]} playback
         {:keys [duration_ms album artists] item-name :name} item
         adjusted-progress-ms (use-adjusted-time-progress is_playing progress_ms duration_ms)
-        stopped? (and (not is_playing) (not item-name))
+        stopped? (spotify/playback-stopped? playback)
         spinner [:> Text
                  (if pending-requests [:> Spinner] " ")
                  " "]]

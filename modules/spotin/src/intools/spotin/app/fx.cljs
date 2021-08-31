@@ -12,18 +12,19 @@
        (= (.-status err) 404)))
 
 (defn with-playback-refresh+ [f]
-  (-> (js/Promise.resolve)
+  (-> (let [playback (.getQueryData @!query-client "player")]
+        (if (spotify/playback-stopped? playback)
+          (spotify/auto-select-device+)
+          ;; TODO: show device picker if auto-connect fails
+          (js/Promise.resolve)))
       (.then #(f))
       (.catch (fn [err]
                 (if (error-not-found? err)
-                  (-> (spotify/get-player-devices+)
-                      (.then (fn [{:keys [devices]}]
-                               (if (= (count devices) 1)
-                                 (let [device-id (-> devices first :id)]
-                                   (-> (spotify/player-transfer+ device-id)
-                                       (.then #(f))))
-                                 ;; TODO open the device picker when multiple devices are listed
-                                 (throw err)))))
+                  (-> (spotify/auto-select-device+)
+                      (.then #(f))
+                      (.catch (fn [_]
+                                (throw err))))
+                  ;; TODO open the device picker when multiple devices are listed
                   (throw err))))
       (.finally #(.invalidateQueries @!query-client "player"))))
 
