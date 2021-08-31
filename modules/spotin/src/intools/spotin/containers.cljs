@@ -223,8 +223,8 @@
                      actions (concat album-actions [action-separator] player-actions)]
                  (dispatch [:open-action-menu actions])))
     :on-activate (fn [item]
-                   (dispatch [:spotin/open-album {:item item
-                                                  :context artist}]))}])
+                   (dispatch [:spotin/activate-album {:item item
+                                                      :context artist}]))}])
 
 (defn artist-panel [artist-id]
   (let [artist-query (useQuery #js ["artists" artist-id] #(spotify/get-artist+ artist-id))

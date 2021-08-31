@@ -57,6 +57,12 @@
   (fn [{db :db} [_ {:keys [item]}]]
     (open-album-fx db (:id item))))
 
+(reg-event-fx :spotin/activate-album
+  (fn [{db :db} [_ {:keys [item]}]]
+    (if (= 1 (:total_tracks item))
+      {:album-play {:item item}}
+      (open-album-fx db (:id item)))))
+
 (defn open-artist-fx [db artist-id]
   {:db (app/router-navigate db {:name :artist
                                 :params {:artist-id artist-id}})})
