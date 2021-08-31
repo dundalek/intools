@@ -1,7 +1,7 @@
 (ns intools.spotin.components.tracks-panel
   (:require [clojure.string :as str]
-            [ink :refer [Box Spacer Text]]
-            [intools.spotin.format :refer [format-album-release-year format-duration]]
+            [ink :refer [Box Text]]
+            [intools.spotin.format :refer [format-album-release-year format-duration playback-indicator]]
             [intools.views :refer [scroll-status uncontrolled-text-input use-scrollable-box]]
             [react]))
 
@@ -11,7 +11,7 @@
         text-style {:bold is-selected :color color}]
     [:> Box
      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
-      [:> Text (assoc text-style :wrap "truncate-end") name]]
+      [:> Text (assoc text-style :wrap "truncate-end") (str (when is-highlighted playback-indicator) " " name)]]
      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
       [:> Text (assoc text-style :wrap "truncate-end") (str/join ", " (map :name artists))]]
      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
@@ -25,7 +25,7 @@
         text-style {:bold is-selected :color color}]
     [:> Box
      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
-      [:> Text (assoc text-style :wrap "truncate-end") name]]
+      [:> Text (assoc text-style :wrap "truncate-end") (str (when is-highlighted playback-indicator) " " name)]]
      [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
       [:> Text (assoc text-style :wrap "truncate-end") (str/join ", " (map :name artists))]]
      [:> Box {:min-width 6 :justify-content "flex-end"}
@@ -34,7 +34,8 @@
 (defn playlist-header [{:keys [playlist tracks]}]
   (let [{:keys [name description owner]} playlist]
     [:> Box {:flex-direction "column"
-             :margin-bottom 1}
+             :margin-bottom 1
+             :padding-left 1}
      [:> Box
       [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
        [:> Text {:dim-color true} "playlist    "]
@@ -53,7 +54,8 @@
 (defn album-header [{:keys [album]}]
   (let [{:keys [name artists release_date total_tracks]} album]
     [:> Box {:flex-direction "column"
-             :margin-bottom 1}
+             :margin-bottom 1
+             :padding-left 1}
      [:> Box
       [:> Box {:flex-basis 0 :flex-grow 1 :padding-right 1 :justify-content "flex-start"}
        [:> Text {:dim-color true} "album "]
@@ -101,7 +103,7 @@
              :flex-grow 1
              :border-style "single"
              :border-color (when is-focused "green")
-             :padding-x 1}
+             :padding-right 1}
      header
      (when is-searching
        [:> Box {:height 2}

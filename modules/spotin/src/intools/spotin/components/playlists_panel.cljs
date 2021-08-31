@@ -2,6 +2,7 @@
   (:require [ink :refer [Box Spacer Text]]
             [intools.hooks :as hooks]
             [intools.search :as search]
+            [intools.spotin.format :refer [playback-indicator]]
             [intools.spotin.model.spotify :as spotify]
             [intools.views :refer [scroll-status uncontrolled-text-input use-selectable-list-controlled]]
             [react]
@@ -14,11 +15,7 @@
                         (or is-selected is-highlighted) "green")}]
     [:> Box
      [:> Text (assoc props :wrap "truncate-end")
-      name]
-     [Spacer]
-     (when is-highlighted
-        ;; perhaps use some speaker pictogram from unicode
-       [:> Text props " >"])]))
+      (str (when is-highlighted playback-indicator) " " name)]]))
 
 (defn playlists-panel [{:keys [focus-id selected-playlist-id search-query playback-context-uri
                                on-activate on-menu on-search-change on-search-cancel]}]
@@ -74,8 +71,8 @@
              :border-style "single"
              :border-color (when is-focused "green")
              :flex-grow 1}
-     [:> Box {:height 1}
-              ;;:justify-content "center"}
+     [:> Box {:height 1
+              :padding-left 1}
       [:> Text {:dim-color true} "Playlists"]]
 
      (when is-searching

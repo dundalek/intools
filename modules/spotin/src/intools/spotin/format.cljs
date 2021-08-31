@@ -1,6 +1,9 @@
 (ns intools.spotin.format
   (:require [clojure.string :as str]))
 
+;; perhaps use some speaker pictogram from unicode
+(def playback-indicator ">")
+
 (defn format-duration [ms]
   (let [sec (Math/floor (/ ms 1000))
         seconds (mod sec 60)
