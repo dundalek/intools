@@ -10,7 +10,7 @@
              :wrap "truncate-end"}
     (or shortcut " ") " " name]])
 
-(defn action-menu [{:keys [actions is-searching item-component width
+(defn action-menu [{:keys [actions is-searching item-component header width
                            on-activate on-cancel on-search-change on-search-cancel]
                     :or {item-component action-item}}]
   (let [[selected-index on-select] (react/useState 0)
@@ -27,6 +27,7 @@
              :border-style "single"
              :border-color (when is-focused "green")
              :width width}
+     header
      (when is-searching
        [:> Box {:flex-direction "column"
                 :height 3}

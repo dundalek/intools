@@ -93,6 +93,8 @@
     [:f> action-menu/action-menu
      {:actions actions
       :item-component device-menu/device-item
+      :header [:> Box {:padding-x 2}
+               [:> Text {:dim-color true} "Devices"]]
       :width width
       :on-cancel #(dispatch [:spotin/close-devices-menu])
       :on-activate (fn [{:keys [id]}]
