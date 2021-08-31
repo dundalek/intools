@@ -102,15 +102,15 @@
        (map (fn [{:keys [id modes]}]
               [id (count modes)])))
 
-  (list-screens)
-
-  (hyperfiddle.rcf/enable!))
+  (list-screens))
 
 (tests
+ (hyperfiddle.rcf/enable!)
 
  (parse-screen "Screen 0: minimum 320 x 200, current 4480 x 1440, maximum 16384 x 16384")
  :=
  {:id "0",
+  :type :screen
   :min-width "320",
   :min-height "200",
   :current-width "4480",
@@ -121,6 +121,7 @@
  (parse-connected-display "eDP-1 connected 1920x1080+2560+198 (normal left inverted right x axis y axis) 309mm x 174mm")
  :=
  {:id "eDP-1",
+  :type :display
   :connected true
   :primary false,
   :direction "normal",
@@ -132,6 +133,7 @@
  (parse-connected-display "DP-1 connected primary 2560x1440+0+0 (normal left inverted right x axis y axis) 597mm x 336mm")
  :=
  {:id "DP-1",
+  :type :display
   :connected true
   :primary true,
   :direction "normal",
@@ -143,6 +145,7 @@
  (parse-connected-display "eDP-1 connected primary 1920x1080+2560+207 inverted (normal left inverted right x axis y axis) 309mm x 174mm")
  :=
  {:id "eDP-1",
+  :type :display
   :connected true,
   :primary true,
   :direction "inverted",
@@ -155,7 +158,7 @@
 
  (parse-disconnected-display "HDMI-1 disconnected (normal left inverted right x axis y axis)")
  :=
- {:id "HDMI-1", :connected false})
+ {:id "HDMI-1" :type :display :connected false})
 
  ; (parse-modeline "   1920x1080     60.03 +  60.01*   59.97    59.96    40.05    59.93  ")
  ; "   1680x1050     59.95    59.88  "

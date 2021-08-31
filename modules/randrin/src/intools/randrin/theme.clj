@@ -27,7 +27,7 @@
 (def cursor-color (rgb->vec 0x97979b))
 (def black background-color)
 (def white (rgb->vec 0xf1f1f0))
-(def lightBlack (rgb->vec 0x686868))
+(def light-black (rgb->vec 0x686868))
 
 (comment
   (hyperfiddle.rcf/enable!))
