@@ -3,7 +3,8 @@
             ["react-query/lib/core/onlineManager" :refer [onlineManager]]
             ["react-query/lib/core/utils" :as utils]
             [intools.spotin.model.spotify :as spotify]
-            [react-query :refer [useQuery]]))
+            [react-query :refer [useMutation useQuery]]
+            [react]))
 
 (defn- subscribe-noop []
   (fn []))
@@ -17,6 +18,34 @@
     (set! (.-subscribe onlineManager) subscribe-noop)
 
     (atom nil)))
+
+(defn use-optimistic-mutation [{:keys [query-key value-path mutate-fn update-fn]}]
+  (let [mutation (useMutation
+                  mutate-fn
+                  #js{:onMutate (fn [new-progress]
+                                  (let [current (.getQueryData @!query-client query-key)
+                                        optimistic (assoc-in current value-path new-progress)]
+                                    (.cancelQueries @!query-client query-key)
+                                    (.setQueryData @!query-client query-key optimistic)))
+                      :onSettled (fn []
+                                    ;; Count 1 means to only invalidate if we are the last mutation
+                                   (when (= (.isMutating @!query-client) 1)
+                                      ;; Playback API does not seem to have Read-your-writes consistency,
+                                      ;; delay for a second before trying to fetch status update
+                                     (js/setTimeout (fn []
+                                                      (when (= (.isMutating @!query-client) 0)
+                                                        (.cancelQueries @!query-client query-key)
+                                                        (.invalidateQueries @!query-client query-key)))
+                                                    1000)))})
+        mutate (.-mutate mutation)
+        mutate-update (react/useCallback
+                       (fn []
+                         (let [current (-> (.getQueryData @!query-client query-key)
+                                           (get-in value-path))]
+                           (mutate (update-fn current))))
+                       #js [mutate])]
+    (set! (.-mutate mutation) mutate-update)
+    mutation))
 
 (defn use-player []
   (useQuery "player" spotify/get-player+ #js {:refetchInterval 5000}))

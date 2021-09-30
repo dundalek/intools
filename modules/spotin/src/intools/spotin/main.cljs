@@ -7,14 +7,14 @@
             [intools.spotin.app.cofx]
             [intools.spotin.app.events]
             [intools.spotin.app.fx]
-            [intools.spotin.app.query :refer [!query-client]]
+            [intools.spotin.app.query :as query :refer [!query-client]]
             [intools.spotin.app.subs]
             [intools.spotin.components.shortcuts-bar :refer [shortcuts-bar]]
             [intools.spotin.containers :as containers]
             [intools.spotin.model.spotify :as spotify]
             [re-frame.core :as rf :refer [dispatch subscribe]]
             [react]
-            [react-query :refer [QueryClient QueryClientProvider useMutation]]
+            [react-query :refer [QueryClient QueryClientProvider]]
             [reagent.core :as r]))
 
 (defonce !app (atom nil))
@@ -40,39 +40,11 @@
           [{:shortcut "q"
             :name "quit"}]))
 
-(defn use-optimistic-mutation [{:keys [query-key value-path mutate-fn update-fn]}]
-  (let [mutation (useMutation
-                  mutate-fn
-                  #js{:onMutate (fn [new-progress]
-                                  (let [current (.getQueryData @!query-client query-key)
-                                        optimistic (assoc-in current value-path new-progress)]
-                                    (.cancelQueries @!query-client query-key)
-                                    (.setQueryData @!query-client query-key optimistic)))
-                      :onSettled (fn []
-                                    ;; Count 1 means to only invalidate if we are the last mutation
-                                   (when (= (.isMutating @!query-client) 1)
-                                      ;; Playback API does not seem to have Read-your-writes consistency,
-                                      ;; delay for a second before trying to fetch status update
-                                     (js/setTimeout (fn []
-                                                      (when (= (.isMutating @!query-client) 0)
-                                                        (.cancelQueries @!query-client query-key)
-                                                        (.invalidateQueries @!query-client query-key)))
-                                                    1000)))})
-        mutate (.-mutate mutation)
-        mutate-update (react/useCallback
-                       (fn []
-                         (let [current (-> (.getQueryData @!query-client query-key)
-                                           (get-in value-path))]
-                           (mutate (update-fn current))))
-                       #js [mutate])]
-    (set! (.-mutate mutation) mutate-update)
-    mutation))
-
 (defn use-play-pause-mutate []
-  (let [play-pause-mutation (use-optimistic-mutation {:query-key "player"
-                                                      :value-path [:is_playing]
-                                                      :mutate-fn spotify/player-play-pause+
-                                                      :update-fn not})]
+  (let [play-pause-mutation (query/use-optimistic-mutation {:query-key "player"
+                                                            :value-path [:is_playing]
+                                                            :mutate-fn spotify/player-play-pause+
+                                                            :update-fn not})]
     (react/useCallback (fn []
                          (let [playback (.getQueryData @!query-client "player")]
                            (if (spotify/playback-stopped? playback)
@@ -109,30 +81,30 @@
         force-focus (not= focused-component-id "error-alert")
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id
                                                                                       :force force-focus})
-        seek-forward-mutation (use-optimistic-mutation {:query-key "player"
-                                                        :value-path [:progress_ms]
-                                                        :mutate-fn spotify/player-seek+
-                                                        :update-fn #(+ % 10000)})
-        seek-backward-mutation (use-optimistic-mutation {:query-key "player"
-                                                         :value-path [:progress_ms]
-                                                         :mutate-fn spotify/player-seek+
-                                                         :update-fn #(-> % (- 10000) (Math/max 0))})
-        volume-up-mutation (use-optimistic-mutation {:query-key "player"
-                                                     :value-path volume-path
-                                                     :mutate-fn spotify/player-volume+
-                                                     :update-fn volume-up})
-        volume-down-mutation (use-optimistic-mutation {:query-key "player"
-                                                       :value-path volume-path
-                                                       :mutate-fn spotify/player-volume+
-                                                       :update-fn volume-down})
-        shuffle-mutation (use-optimistic-mutation {:query-key "player"
-                                                   :value-path [:shuffle_state]
-                                                   :mutate-fn spotify/player-shuffle+
-                                                   :update-fn not})
-        repeat-mutation (use-optimistic-mutation {:query-key "player"
-                                                  :value-path [:repeat_state]
-                                                  :mutate-fn spotify/player-repeat+
-                                                  :update-fn spotify/repeat-state-transition})
+        seek-forward-mutation (query/use-optimistic-mutation {:query-key "player"
+                                                              :value-path [:progress_ms]
+                                                              :mutate-fn spotify/player-seek+
+                                                              :update-fn #(+ % 10000)})
+        seek-backward-mutation (query/use-optimistic-mutation {:query-key "player"
+                                                               :value-path [:progress_ms]
+                                                               :mutate-fn spotify/player-seek+
+                                                               :update-fn #(-> % (- 10000) (Math/max 0))})
+        volume-up-mutation (query/use-optimistic-mutation {:query-key "player"
+                                                           :value-path volume-path
+                                                           :mutate-fn spotify/player-volume+
+                                                           :update-fn volume-up})
+        volume-down-mutation (query/use-optimistic-mutation {:query-key "player"
+                                                             :value-path volume-path
+                                                             :mutate-fn spotify/player-volume+
+                                                             :update-fn volume-down})
+        shuffle-mutation (query/use-optimistic-mutation {:query-key "player"
+                                                         :value-path [:shuffle_state]
+                                                         :mutate-fn spotify/player-shuffle+
+                                                         :update-fn not})
+        repeat-mutation (query/use-optimistic-mutation {:query-key "player"
+                                                        :value-path [:repeat_state]
+                                                        :mutate-fn spotify/player-repeat+
+                                                        :update-fn spotify/repeat-state-transition})
         play-pause-mutate (use-play-pause-mutate)
         dispatch-action (fn [{:keys [id event arg] :as action}]
                           (if event
