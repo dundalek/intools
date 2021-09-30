@@ -181,12 +181,6 @@
 (defn playlist-change+ [playlist-id body]
   (put+ (str "https://api.spotify.com/v1/playlists/" playlist-id) body))
 
-(defn playlist-rename+ [playlist-id name]
-  (playlist-change+ playlist-id {:name name}))
-
-(defn playlist-change-description+ [playlist-id description]
-  (playlist-change+ playlist-id {:description description}))
-
 (defn playlist-unfollow+ [playlist-id]
   (delete+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id) "/followers")))
 

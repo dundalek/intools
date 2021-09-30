@@ -47,6 +47,26 @@
     (set! (.-mutate mutation) mutate-update)
     mutation))
 
+(defn use-optimistic-playlist-mutation [{:keys [playlist-id attr]}]
+  (let [query-key "playlists"]
+    (useMutation
+     #(spotify/playlist-change+ playlist-id {attr %})
+     #js{:onMutate (fn [value]
+                     (let [current (.getQueryData @!query-client query-key)
+                           optimistic (update current :items
+                                              (partial map (fn [playlist]
+                                                             (cond-> playlist
+                                                               (= (:id playlist) playlist-id) (assoc attr value)))))]
+                       (.cancelQueries @!query-client query-key)
+                       (.setQueryData @!query-client query-key optimistic)
+                       current))
+         :onError (fn [_err _value original]
+                    (.setQueryData @!query-client query-key original))
+         :onSettled (fn []
+                      ;; Count 1 means to only invalidate if we are the last mutation
+                      (when (= (.isMutating @!query-client) 1)
+                        (.invalidateQueries @!query-client query-key)))})))
+
 (defn use-player []
   (useQuery "player" spotify/get-player+ #js {:refetchInterval 5000}))
 

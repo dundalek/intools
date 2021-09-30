@@ -162,9 +162,9 @@
      [containers/confirmation-modal]
      (case (:type active-input-panel)
        :playlist-rename
-       [containers/playlist-rename-input-panel (:arg active-input-panel)]
+       [:f> containers/playlist-rename-input-panel (:arg active-input-panel)]
        :playlist-edit-description
-       [containers/playlist-edit-description-input-panel (:arg active-input-panel)]
+       [:f> containers/playlist-edit-description-input-panel (:arg active-input-panel)]
        nil)
      [:> Box {:flex-grow 1}
       (when actions
