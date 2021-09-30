@@ -3,10 +3,9 @@
             [intools.hooks :as hooks]
             [intools.search :as search]
             [intools.spotin.format :refer [playback-indicator]]
-            [intools.spotin.model.spotify :as spotify]
             [intools.views :refer [scroll-status uncontrolled-text-input use-selectable-list-controlled]]
             [react]
-            [react-query :refer [QueryClient QueryClientProvider useMutation useQuery useQueryClient]]))
+            [intools.spotin.app.query :as query]))
 
 (defn playlist-item [{:keys [name]} {:keys [is-selected is-active is-highlighted]}]
   (let [props {:bold is-selected
@@ -19,7 +18,7 @@
 
 (defn playlists-panel [{:keys [focus-id selected-playlist-id search-query playback-context-uri
                                on-activate on-menu on-search-change on-search-cancel]}]
-  (let [query (useQuery "playlists" spotify/get-all-playlists+)
+  (let [query (query/use-playlists)
         all-playlists (:items (.-data query))
         playlists (react/useMemo
                    (fn [] (search/filter-by search-query :name all-playlists))

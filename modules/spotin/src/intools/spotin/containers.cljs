@@ -15,8 +15,7 @@
             [intools.spotin.components.tracks-panel :refer [album-header album-track-item playlist-header playlist-track-item tracks-panel]]
             [intools.spotin.model.spotify :as spotify]
             [re-frame.core :refer [dispatch subscribe]]
-            [react]
-            [react-query :refer [useQuery]]))
+            [react]))
 
 (defn playlist-rename-input-panel [{:keys [id name]}]
   [:f> input-bar/input-bar
@@ -87,7 +86,7 @@
       :on-cancel #(dispatch [:close-action-menu])}]))
 
 (defn devices-menu [{:keys [width]}]
-  (let [query (useQuery "devices" spotify/get-player-devices+)
+  (let [query (query/use-devices)
         actions (->> query .-data :devices
                      (map #(select-keys % [:id :name :type :is_active])))]
     [:f> action-menu/action-menu
@@ -132,9 +131,9 @@
 
 (defn playlist-tracks-panel [playlist-id]
   (let [search-query @(subscribe [:spotin/track-search-query])
-        query (useQuery #js ["playlists" playlist-id] #(spotify/get-playlist+ playlist-id))
+        query (query/use-playlist playlist-id)
         context-item (.-data query)
-        tracks-query (useQuery #js ["playlist-tracks" playlist-id] #(spotify/get-playlist-tracks+ playlist-id))
+        tracks-query (query/use-playlist-tracks playlist-id)
         all-tracks (-> tracks-query .-data :items)
         tracks-filtered (react/useMemo
                          #(->> all-tracks
@@ -149,9 +148,9 @@
 
 (defn album-tracks-panel [album-id]
   (let [search-query @(subscribe [:spotin/track-search-query])
-        query (useQuery #js ["albums" album-id] #(spotify/get-album+ album-id))
+        query (query/use-albums album-id)
         context-item (.-data query)
-        tracks-query (useQuery #js ["album-tracks" album-id] #(spotify/get-album-tracks+ album-id))
+        tracks-query (query/use-album-tracks album-id)
         all-tracks (-> tracks-query .-data :items)
         tracks-filtered (react/useMemo
                          #(->> all-tracks
@@ -171,7 +170,7 @@
        (sort-by :release_date #(compare %2 %1))))
 
 (defn artist-top-track-sub-panel [{:keys [artist-id artist]}]
-  (let [top-tracks-query (useQuery #js ["artist-top-tracks" artist-id] #(spotify/get-artist-top-tracks+ artist-id))
+  (let [top-tracks-query (query/use-artist-top-tracks artist-id)
         top-tracks (-> top-tracks-query .-data :tracks)]
     [:f> artist-panel/artist-sub-panel
      {:focus-id "artist-top-tracks"
@@ -193,7 +192,7 @@
                                                                  :context artist}]))}]))
 
 (defn artist-related-artists-sub-panel [{:keys [artist-id artist]}]
-  (let [related-artists-query (useQuery #js ["artist-related-artists" artist-id] #(spotify/get-artist-related-artists+ artist-id))
+  (let [related-artists-query (query/use-artist-related-artists artist-id)
         related-artists (-> related-artists-query .-data :artists)]
     [:f> artist-panel/artist-sub-panel
      {:focus-id "artist-related-artists"
@@ -229,9 +228,9 @@
                                                       :context artist}]))}])
 
 (defn artist-panel [artist-id]
-  (let [artist-query (useQuery #js ["artists" artist-id] #(spotify/get-artist+ artist-id))
+  (let [artist-query (query/use-artist artist-id)
         artist (.-data artist-query)
-        albums-query (useQuery #js ["artist-albums" artist-id] #(spotify/get-artist-albums+ artist-id))
+        albums-query (query/use-artist-albums artist-id)
         albums (-> albums-query .-data :items)
         groups (group-by :album_group albums)]
     [:> Box {:flex-direction "column"
