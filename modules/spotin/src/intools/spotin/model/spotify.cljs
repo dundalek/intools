@@ -1,5 +1,6 @@
 (ns intools.spotin.model.spotify
-  (:require [clojure.string :as str]
+  (:require [abort-controller :refer [AbortController]]
+            [clojure.string :as str]
             [node-fetch :as fetch]))
 
 (def client-id (.. js/process -env -SPOTIFY_CLIENT_ID))
@@ -41,22 +42,27 @@
           form-params))
 
 (defn fetch-request [{:keys [url body form json method] :as opts}]
-  (-> (fetch url (-> (cond-> opts
-                       body (assoc :body (js/JSON.stringify body))
-                       (and json (not form)) (update :headers assoc :Content-Type "application/json")
-                       form (assoc :body (encode-form-params form)))
-                     (dissoc :json :form)
-                     (clj->js)))
-      (.then (fn [response]
-               (if (.-ok response)
-                 (if (and json (not= (.-status response) 204))
-                   (-> (.text response)
-                       (.then (fn [text]
-                                (if-not (str/blank? text)
-                                  (js/JSON.parse text)
-                                  response))))
-                   response)
-                 (throw response))))))
+  (let [controller (AbortController.)
+        timer-id (js/setTimeout #(.abort controller) 10000)]
+    (-> (fetch url (-> (cond-> opts
+                         body (assoc :body (js/JSON.stringify body))
+                         (and json (not form)) (update :headers assoc :Content-Type "application/json")
+                         form (assoc :body (encode-form-params form)))
+                       (dissoc :json :form)
+                       (assoc :signal (.-signal controller))
+                       (clj->js)))
+        (.finally (fn []
+                    (js/clearTimeout timer-id)))
+        (.then (fn [response]
+                 (if (.-ok response)
+                   (if (and json (not= (.-status response) 204))
+                     (-> (.text response)
+                         (.then (fn [text]
+                                  (if-not (str/blank? text)
+                                    (js/JSON.parse text)
+                                    response))))
+                     response)
+                   (throw response)))))))
 
 (defn tokens-from-authorization-code+ [code]
   (let [auth-options {:method "POST"

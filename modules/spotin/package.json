@@ -13,6 +13,7 @@
     "yoga-layout-prebuilt": "1.10.0"
   },
   "devDependencies": {
+    "abort-controller": "3.0.0",
     "env-paths": "2.2.1",
     "ink": "3.0.9",
     "ink-spinner": "4.0.2",
