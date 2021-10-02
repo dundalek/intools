@@ -1,7 +1,8 @@
 (ns intools.spotin.model.spotify
   (:require [abort-controller :refer [AbortController]]
             [clojure.string :as str]
-            [node-fetch :as fetch]))
+            [node-fetch :as fetch])
+  (:import (goog.Uri QueryData)))
 
 (def client-id (.. js/process -env -SPOTIFY_CLIENT_ID))
 (def client-secret (.. js/process -env -SPOTIFY_CLIENT_SECRET))
@@ -40,6 +41,12 @@
             params)
           (js/URLSearchParams.)
           form-params))
+
+(defn encode-query-params [query-params]
+  (let [qd (QueryData.)]
+    (doseq [[k v] query-params]
+      (.set qd (name k) v))
+    (.toString qd)))
 
 (defn fetch-request [{:keys [url body form json method] :as opts}]
   (let [controller (AbortController.)
@@ -124,33 +131,39 @@
       (.finally #(when *after-request-callback*
                    (*after-request-callback* opts)))))
 
+(defn request
+  ([url] (request url nil))
+  ([url {:keys [method query-params body]}]
+   (cond-> {:method (str/upper-case (name method))
+            :url (if (seq query-params)
+                   (str url "?" (encode-query-params query-params))
+                   url)
+            :json true}
+     (map? body) (assoc :body (clj->js body)))))
+
+(defn get-request
+  ([url] (get-request url nil))
+  ([url opts]
+   (request url (assoc opts :method :get))))
+
 (defn put+
   ([url] (put+ url nil))
-  ([url body]
-   (request-with-auto-refresh+ (cond-> {:method "PUT"
-                                        :url url
-                                        :json true}
-                                 (some? body) (assoc :body (clj->js body))))))
+  ([url opts]
+   (request-with-auto-refresh+ (request url (assoc opts :method :put)))))
 
 (defn post+
   ([url] (post+ url nil))
-  ([url body]
-   (request-with-auto-refresh+ (cond-> {:method "POST"
-                                        :url url
-                                        :json true}
-                                 (some? body) (assoc :body (clj->js body))))))
-
-(defn get-request [url]
-  {:method "GET"
-   :url url
-   :json true})
+  ([url opts]
+   (request-with-auto-refresh+ (request url (assoc opts :method :post)))))
 
 (defn get+ [url]
   (request-with-auto-refresh+ (get-request url)))
 
-(defn get-clj+ [url]
-  (-> (request-with-auto-refresh+ (get-request url))
-      (.then (fn [body] (js->clj body :keywordize-keys true)))))
+(defn get-clj+
+  ([url] (get-clj+ url nil))
+  ([url opts]
+   (-> (request-with-auto-refresh+ (get-request url opts))
+       (.then (fn [body] (js->clj body :keywordize-keys true))))))
 
 (defn delete-request [url]
   {:method "DELETE"
@@ -182,10 +195,12 @@
 
 (defn get-playlist-tracks+ [playlist-id]
   ;; TODO use paginated-get+
-  (get-clj+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id) "/tracks?limit=100")))
+  (get-clj+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id) "/tracks")
+            {:query-params {:limit 100}}))
 
 (defn playlist-change+ [playlist-id body]
-  (put+ (str "https://api.spotify.com/v1/playlists/" playlist-id) body))
+  (put+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id))
+        {:body body}))
 
 (defn playlist-unfollow+ [playlist-id]
   (delete+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id) "/followers")))
@@ -195,7 +210,8 @@
 
 (defn get-album-tracks+ [album-id]
   ;; TODO use paginated-get+
-  (get-clj+ (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id) "/tracks?limit=50")))
+  (get-clj+ (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id) "/tracks")
+            {:query-params {:limit 50}}))
 
 (defn get-artist+ [artist-id]
   (get-clj+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id))))
@@ -203,10 +219,12 @@
 (defn get-artist-albums+ [artist-id]
   ;; TODO use paginated-get+
   ;; TODO include appears_on,compilation album groups later, needs thinking about how to fit them in the UI
-  (get-clj+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/albums?limit=50&include_groups=album,single")))
+  (get-clj+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/albums")
+            {:query-params {:limit 50 :include_groups "album,single"}}))
 
 (defn get-artist-top-tracks+ [artist-id]
-  (get-clj+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/top-tracks?market=from_token")))
+  (get-clj+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/top-tracks")
+            {:query-params {:market "from_token"}}))
 
 (defn get-artist-related-artists+ [artist-id]
   (get-clj+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/related-artists")))
@@ -217,24 +235,27 @@
 (defn get-player-devices+ []
   (get-clj+ "https://api.spotify.com/v1/me/player/devices"))
 
-(defn create-playlist+ [user-id {:keys [_name _public _collaborative _description] :as opts}]
-  (post+ (str "https://api.spotify.com/v1/users/" user-id "/playlists"
-              (merge {:public false :collaborative false} opts))))
+(defn create-playlist+ [user-id {:keys [_name _public _collaborative _description] :as body}]
+  (post+ (str "https://api.spotify.com/v1/users/" user-id "/playlists")
+         {:body (merge {:public false :collaborative false} body)}))
 
 (defn player-transfer+ [device-id]
-  (let [opts #js {:device_ids #js [device-id]}]
-    (put+ "https://api.spotify.com/v1/me/player" opts)))
+  (put+ "https://api.spotify.com/v1/me/player"
+        {:body {:device_ids [device-id]}}))
 
 (defn player-volume+ [volume-percent]
-  (put+ (str "https://api.spotify.com/v1/me/player/volume?volume_percent=" (js/encodeURIComponent volume-percent))))
+  (put+ (str "https://api.spotify.com/v1/me/player/volume")
+        {:query-params {:volume_percent volume-percent}}))
 
 (defn player-seek+ [position-ms]
-  (put+ (str "https://api.spotify.com/v1/me/player/seek?position_ms=" (js/encodeURIComponent position-ms))))
+  (put+ (str "https://api.spotify.com/v1/me/player/seek")
+        {:query-params {:position_ms position-ms}}))
 
 (defn player-play+
   ([] (player-play+ nil))
-  ([opts]
-   (put+ "https://api.spotify.com/v1/me/player/play" opts)))
+  ([body]
+   (put+ "https://api.spotify.com/v1/me/player/play"
+         {:body body})))
 
 (defn player-pause+ []
   (put+ "https://api.spotify.com/v1/me/player/pause"))
@@ -245,8 +266,8 @@
     (player-pause+)))
 
 (defn player-shuffle+ [state]
-  (put+ (str "https://api.spotify.com/v1/me/player/shuffle?state="
-             (if state "true" "false"))))
+  (put+ (str "https://api.spotify.com/v1/me/player/shuffle")
+        {:query-params {:state (if state "true" "false")}}))
 
 (defn player-toggle-shuffle+ []
   (-> (get-player+)
@@ -260,7 +281,8 @@
    "off" "context"})
 
 (defn player-repeat+ [state]
-  (put+ (str "https://api.spotify.com/v1/me/player/repeat?state=" state)))
+  (put+ (str "https://api.spotify.com/v1/me/player/repeat")
+        {:query-params {:state state}}))
 
 (defn player-toggle-repeat+ []
   (-> (get-player+)

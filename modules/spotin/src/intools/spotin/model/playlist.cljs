@@ -34,4 +34,4 @@
                                  (fn [^js body]
                                    (let [playlist-id (.-id body)]
                                      (spotify/post+ (str "https://api.spotify.com/v1/playlists/" playlist-id "/tracks")
-                                                    {:uris track-uris})))))))))))
+                                                    {:body {:uris track-uris}})))))))))))
