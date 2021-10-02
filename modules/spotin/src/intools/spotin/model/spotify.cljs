@@ -149,6 +149,10 @@
   {:enter (fn [ctx]
             (update ctx :request add-authorization-header))})
 
+(def js->clj-response-interceptor
+  {:leave (fn [ctx]
+            (update ctx :response js->clj :keywordize-keys true))})
+
 (def request-interceptors
   [callbacks-interceptor
    refresh-interceptor
@@ -185,14 +189,14 @@
   ([url opts]
    (request-with-auto-refresh+ (request url (assoc opts :method :post)))))
 
-(defn get+ [url]
-  (request-with-auto-refresh+ (get-request url)))
-
-(defn get-clj+
-  ([url] (get-clj+ url nil))
-  ([url opts]
-   (-> (request-with-auto-refresh+ (get-request url opts))
-       (.then (fn [body] (js->clj body :keywordize-keys true))))))
+(defn get-clj+ [& args]
+  (js/Promise.
+   (fn [resolve reject]
+     (sieppari/execute
+      (into [js->clj-response-interceptor] request-interceptors)
+      (apply get-request args)
+      resolve
+      reject))))
 
 (defn delete-request [url]
   {:method "DELETE"
@@ -325,9 +329,9 @@
   (post+ "https://api.spotify.com/v1/me/player/previous"))
 
 (defn user-id+ []
-  (-> (get+ "https://api.spotify.com/v1/me")
-      (.then (fn [^js body]
-               (.-id body)))))
+  (-> (get-clj+ "https://api.spotify.com/v1/me")
+      (.then (fn [body]
+               (:id body)))))
 
 (defn auto-select-device+ []
   (-> (get-player-devices+)
