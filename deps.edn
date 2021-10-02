@@ -8,7 +8,10 @@
 
  :aliases
  {:shadow-cljs
-  {:extra-deps {thheller/shadow-cljs {:mvn/version "2.11.23"}}
+  {:extra-deps {thheller/shadow-cljs {:mvn/version "2.11.23"}
+                ;; For spotin, TODO add a separate profile
+                io.github.metosin/sieppari {;:tag "0.0.0-alpha13"
+                                            :sha "7a97d55d8063f30359e902b0678c6ebca952f9fd"}}
    :main-opts ["-m" "shadow.cljs.devtools.cli"]
    :extra-paths ["lib/src"
                  "modules/dkmsin/src"

@@ -1,7 +1,8 @@
 (ns intools.spotin.model.spotify
   (:require [abort-controller :refer [AbortController]]
             [clojure.string :as str]
-            [node-fetch :as fetch])
+            [node-fetch :as fetch]
+            [sieppari.core :as sieppari])
   (:import (goog.Uri QueryData)))
 
 (def client-id (.. js/process -env -SPOTIFY_CLIENT_ID))
@@ -107,29 +108,57 @@
 (defn add-authorization-header [opts]
   (update opts :headers assoc :Authorization (str "Bearer " *access-token*)))
 
-(defn authorized-request+ [opts]
-  (-> (js/Promise.resolve)
-      (.then #(fetch-request (add-authorization-header opts)))))
+(defn re-execute-context [{:keys [queue] :as ctx}]
+  (let [ctx (dissoc ctx :stack :queue)]
+    (js/Promise.
+     (fn [resolve reject]
+       (sieppari/execute-context queue ctx resolve reject)))))
+
+(def callbacks-interceptor
+  {:enter (fn [{:keys [request] :as ctx}]
+            (when *before-request-callback*
+              (*before-request-callback* request))
+            ctx)
+   :leave (fn [{:keys [request] :as ctx}]
+            (when *after-request-callback*
+              (*after-request-callback* request))
+            ctx)
+   :error (fn [{:keys [request error] :as ctx}]
+            (when *request-error-callback*
+              (*request-error-callback* error request))
+            (when *after-request-callback*
+              (*after-request-callback* request))
+            ctx)})
+
+(def refresh-interceptor
+  {:enter (fn [ctx]
+            (let [ctx (assoc ctx :refresh-ctx ctx)]
+              (if *access-token*
+                ctx
+                (-> (refresh-token+ refresh-token)
+                    (.then (fn [] ctx))))))
+   :error (fn [{:keys [error refresh-ctx stack] :as ctx}]
+            (if-not (expired-token? error)
+              ctx
+              ;; Naive implementation: we might get multiple refreshes for concurrent requests.
+              (-> (refresh-token+ refresh-token)
+                  (.then #(re-execute-context refresh-ctx))
+                  (.then #(assoc % :stack stack)))))})
+
+(def authorize-interceptor
+  {:enter (fn [ctx]
+            (update ctx :request add-authorization-header))})
+
+(def request-interceptors
+  [callbacks-interceptor
+   refresh-interceptor
+   authorize-interceptor
+   fetch-request])
 
 (defn request-with-auto-refresh+ [opts]
-  (-> (js/Promise.resolve)
-      (.then #(when *before-request-callback*
-                (*before-request-callback* opts)))
-      (.then #(when-not *access-token*
-                (refresh-token+ refresh-token)))
-      (.then #(authorized-request+ opts))
-      (.catch (fn [e]
-                (if (expired-token? e)
-                  ;; We might get multiple refreshes for concurrent requests
-                  (-> (refresh-token+ refresh-token)
-                      (.then #(authorized-request+ opts)))
-                  (throw e))))
-      (.catch (fn [e]
-                (when *request-error-callback*
-                  (*request-error-callback* e opts))
-                (throw e)))
-      (.finally #(when *after-request-callback*
-                   (*after-request-callback* opts)))))
+  (js/Promise.
+   (fn [resolve reject]
+     (sieppari/execute request-interceptors opts resolve reject))))
 
 (defn request
   ([url] (request url nil))
