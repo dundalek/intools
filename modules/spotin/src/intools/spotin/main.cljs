@@ -43,14 +43,14 @@
 (defn use-play-pause-mutate []
   (let [play-pause-mutation (query/use-optimistic-mutation {:query-key "player"
                                                             :value-path [:is_playing]
-                                                            :mutate-fn spotify/player-play-pause+
+                                                            :mutate-fn #(spotify/request+ (spotify/player-play-pause %))
                                                             :update-fn not})]
     (react/useCallback (fn []
                          (let [playback (.getQueryData @!query-client "player")]
                            (if (spotify/playback-stopped? playback)
                              (-> (spotify/auto-select-device+)
                                  ;; TODO: show device picker if auto-connect fails
-                                 (.then #(spotify/player-play+)))
+                                 (.then #(spotify/request+ (spotify/player-play))))
                              (.mutate play-pause-mutation)))))))
 
 (def volume-path [:device :volume_percent])
@@ -83,27 +83,27 @@
                                                                                       :force force-focus})
         seek-forward-mutation (query/use-optimistic-mutation {:query-key "player"
                                                               :value-path [:progress_ms]
-                                                              :mutate-fn spotify/player-seek+
+                                                              :mutate-fn #(spotify/request+ (spotify/player-seek %))
                                                               :update-fn #(+ % 10000)})
         seek-backward-mutation (query/use-optimistic-mutation {:query-key "player"
                                                                :value-path [:progress_ms]
-                                                               :mutate-fn spotify/player-seek+
+                                                               :mutate-fn #(spotify/request+ (spotify/player-seek %))
                                                                :update-fn #(-> % (- 10000) (Math/max 0))})
         volume-up-mutation (query/use-optimistic-mutation {:query-key "player"
                                                            :value-path volume-path
-                                                           :mutate-fn spotify/player-volume+
+                                                           :mutate-fn #(spotify/request+ (spotify/player-volume %))
                                                            :update-fn volume-up})
         volume-down-mutation (query/use-optimistic-mutation {:query-key "player"
                                                              :value-path volume-path
-                                                             :mutate-fn spotify/player-volume+
+                                                             :mutate-fn #(spotify/request+ (spotify/player-volume %))
                                                              :update-fn volume-down})
         shuffle-mutation (query/use-optimistic-mutation {:query-key "player"
                                                          :value-path [:shuffle_state]
-                                                         :mutate-fn spotify/player-shuffle+
+                                                         :mutate-fn #(spotify/request+ (spotify/player-shuffle %))
                                                          :update-fn not})
         repeat-mutation (query/use-optimistic-mutation {:query-key "player"
                                                         :value-path [:repeat_state]
-                                                        :mutate-fn spotify/player-repeat+
+                                                        :mutate-fn #(spotify/request+ (spotify/player-repeat %))
                                                         :update-fn spotify/repeat-state-transition})
         play-pause-mutate (use-play-pause-mutate)
         dispatch-action (fn [{:keys [id event arg] :as action}]

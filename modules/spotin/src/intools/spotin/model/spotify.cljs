@@ -217,16 +217,6 @@
 (defn delete [url & [opts]]
   (assoc opts :method :delete :url url :json true))
 
-(defn put+
-  ([url] (put+ url nil))
-  ([url opts]
-   (request+ (put url opts))))
-
-(defn post+
-  ([url] (post+ url nil))
-  ([url opts]
-   (request+ (post url opts))))
-
 (defn paginated-get+ [initial-url]
   (let [!items (atom nil)]
     (letfn [(fetch-page+ [url]
@@ -286,39 +276,39 @@
 (defn get-player-devices []
   (get "https://api.spotify.com/v1/me/player/devices"))
 
-(defn create-playlist+ [user-id {:keys [_name _public _collaborative _description] :as body}]
-  (post+ (str "https://api.spotify.com/v1/users/" user-id "/playlists")
-         {:body (merge {:public false :collaborative false} body)}))
+(defn create-playlist [user-id {:keys [_name _public _collaborative _description] :as body}]
+  (post (str "https://api.spotify.com/v1/users/" user-id "/playlists")
+        {:body (merge {:public false :collaborative false} body)}))
 
-(defn player-transfer+ [device-id]
-  (put+ "https://api.spotify.com/v1/me/player"
-        {:body {:device_ids [device-id]}}))
+(defn player-transfer [device-id]
+  (put "https://api.spotify.com/v1/me/player"
+       {:body {:device_ids [device-id]}}))
 
-(defn player-volume+ [volume-percent]
-  (put+ (str "https://api.spotify.com/v1/me/player/volume")
-        {:query-params {:volume_percent volume-percent}}))
+(defn player-volume [volume-percent]
+  (put (str "https://api.spotify.com/v1/me/player/volume")
+       {:query-params {:volume_percent volume-percent}}))
 
-(defn player-seek+ [position-ms]
-  (put+ (str "https://api.spotify.com/v1/me/player/seek")
-        {:query-params {:position_ms position-ms}}))
+(defn player-seek [position-ms]
+  (put (str "https://api.spotify.com/v1/me/player/seek")
+       {:query-params {:position_ms position-ms}}))
 
-(defn player-play+
-  ([] (player-play+ nil))
+(defn player-play
+  ([] (player-play nil))
   ([body]
-   (put+ "https://api.spotify.com/v1/me/player/play"
-         {:body body})))
+   (put "https://api.spotify.com/v1/me/player/play"
+        {:body body})))
 
-(defn player-pause+ []
-  (put+ "https://api.spotify.com/v1/me/player/pause"))
+(defn player-pause []
+  (put "https://api.spotify.com/v1/me/player/pause"))
 
-(defn player-play-pause+ [play?]
+(defn player-play-pause [play?]
   (if play?
-    (player-play+)
-    (player-pause+)))
+    (player-play)
+    (player-pause)))
 
-(defn player-shuffle+ [state]
-  (put+ (str "https://api.spotify.com/v1/me/player/shuffle")
-        {:query-params {:state (if state "true" "false")}}))
+(defn player-shuffle [state]
+  (put (str "https://api.spotify.com/v1/me/player/shuffle")
+       {:query-params {:state (if state "true" "false")}}))
 
 ;; repeat_state
 (def repeat-state-transition
@@ -326,15 +316,15 @@
    "track" "off"
    "off" "context"})
 
-(defn player-repeat+ [state]
-  (put+ (str "https://api.spotify.com/v1/me/player/repeat")
-        {:query-params {:state state}}))
+(defn player-repeat [state]
+  (put (str "https://api.spotify.com/v1/me/player/repeat")
+       {:query-params {:state state}}))
 
-(defn player-next+ []
-  (post+ "https://api.spotify.com/v1/me/player/next"))
+(defn player-next []
+  (post "https://api.spotify.com/v1/me/player/next"))
 
-(defn player-previous+ []
-  (post+ "https://api.spotify.com/v1/me/player/previous"))
+(defn player-previous []
+  (post "https://api.spotify.com/v1/me/player/previous"))
 
 (defn user-id+ []
   (-> (request+ (get "https://api.spotify.com/v1/me"))
@@ -346,7 +336,7 @@
       (.then (fn [{:keys [devices]}]
                (if (= (count devices) 1)
                  (let [device-id (-> devices first :id)]
-                   (player-transfer+ device-id))
+                   (request+ (player-transfer device-id)))
                  (throw (js/Error. "No active player device detected.")))))))
 
 (defn playback-stopped? [playback]

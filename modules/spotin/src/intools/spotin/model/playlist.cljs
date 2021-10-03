@@ -26,12 +26,13 @@
                                      (map :items)
                                      (generate-mixed-playlist)
                                      (map #(get-in % [:track :uri])))]
-                 (.then (spotify/user-id+)
-                        (fn [user-id]
-                          (.then (spotify/create-playlist+ user-id {:name (str "Generated-" (+ 100 (rand-int 900)))})
-                                                                    ;; TODO: fix description - will need to fetch playlists for their name
-                                                                    ;;:description (str "Generated from: " (str/join ", " (map :name playlists)))})
-                                 (fn [body]
-                                   (let [playlist-id (:id body)]
-                                     (spotify/post+ (str "https://api.spotify.com/v1/playlists/" playlist-id "/tracks")
-                                                    {:body {:uris track-uris}})))))))))))
+                 (-> (spotify/user-id+)
+                     (.then (fn [user-id]
+                              ;; TODO: add description - will need to fetch playlists for their name
+                              ;;:description (str "Generated from: " (str/join ", " (map :name playlists)))})
+                              (let [playlist-name (str "Generated-" (+ 100 (rand-int 900)))]
+                                (spotify/request+ (spotify/create-playlist user-id {:name playlist-name})))))
+                     (.then (fn [body]
+                              (let [playlist-id (:id body)]
+                                (spotify/request+ (spotify/post (str "https://api.spotify.com/v1/playlists/" playlist-id "/tracks")
+                                                                {:body {:uris track-uris}})))))))))))
