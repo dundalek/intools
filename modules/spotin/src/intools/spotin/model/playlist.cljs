@@ -31,7 +31,7 @@
                           (.then (spotify/create-playlist+ user-id {:name (str "Generated-" (+ 100 (rand-int 900)))})
                                                                     ;; TODO: fix description - will need to fetch playlists for their name
                                                                     ;;:description (str "Generated from: " (str/join ", " (map :name playlists)))})
-                                 (fn [^js body]
-                                   (let [playlist-id (.-id body)]
+                                 (fn [body]
+                                   (let [playlist-id (:id body)]
                                      (spotify/post+ (str "https://api.spotify.com/v1/playlists/" playlist-id "/tracks")
                                                     {:body {:uris track-uris}})))))))))))

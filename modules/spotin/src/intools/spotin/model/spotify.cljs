@@ -1,4 +1,5 @@
 (ns intools.spotin.model.spotify
+  (:refer-clojure :exclude [get])
   (:require [abort-controller :refer [AbortController]]
             [clojure.string :as str]
             [node-fetch :as fetch]
@@ -191,7 +192,7 @@
                   (.then #(assoc % :stack stack)))))})
 
 (def request-interceptors
-  [;js->clj-response-interceptor
+  [js->clj-response-interceptor
    parse-json-response-interceptor
    callbacks-interceptor
    refresh-interceptor
@@ -204,51 +205,36 @@
    (fn [resolve reject]
      (sieppari/execute request-interceptors opts resolve reject))))
 
-(defn get-request
-  ([url] (get-request url nil))
-  ([url opts]
-   (assoc opts
-          :method :get
-          :url url
-          :json true)))
+(defn get [url & [opts]]
+  (assoc opts :method :get :url url :json true))
+
+(defn put [url & [opts]]
+  (assoc opts :method :put :url url :json true))
+
+(defn post [url & [opts]]
+  (assoc opts :method :post :url url :json true))
+
+(defn delete [url & [opts]]
+  (assoc opts :method :delete :url url :json true))
 
 (defn put+
   ([url] (put+ url nil))
   ([url opts]
-   (request+
-    (assoc opts
-           :method :put
-           :url url
-           :json true))))
+   (request+ (put url opts))))
 
 (defn post+
   ([url] (post+ url nil))
   ([url opts]
-   (request+
-    (assoc opts
-           :method :post
-           :url url
-           :json true))))
+   (request+ (post url opts))))
 
 (defn get-clj+ [& args]
-  (js/Promise.
-   (fn [resolve reject]
-     (sieppari/execute
-      (into [js->clj-response-interceptor] request-interceptors)
-      (apply get-request args)
-      resolve
-      reject))))
-
-(defn delete-request [url]
-  {:method :delete
-   :url url
-   :json true})
+  (request+ (apply get args)))
 
 (defn delete+ [url]
-  (request+ (delete-request url)))
+  (request+ (delete url)))
 
 (defn get-playlists []
-  (get-request "https://api.spotify.com/v1/me/playlists"))
+  (get "https://api.spotify.com/v1/me/playlists"))
 
 (defn paginated-get+ [initial-url]
   (let [!items (atom nil)]
