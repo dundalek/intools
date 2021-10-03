@@ -49,70 +49,36 @@
       (.set qd (name k) v))
     (.toString qd)))
 
-(defn fetch-request [{:keys [url body form json method] :as opts}]
-  (let [controller (AbortController.)
-        timer-id (js/setTimeout #(.abort controller) 10000)]
-    (-> (fetch url (-> (cond-> opts
-                         body (assoc :body (js/JSON.stringify body))
-                         (and json (not form)) (update :headers assoc :Content-Type "application/json")
-                         form (assoc :body (encode-form-params form)))
-                       (dissoc :json :form)
-                       (assoc :signal (.-signal controller))
-                       (clj->js)))
-        (.finally (fn []
-                    (js/clearTimeout timer-id)))
-        (.then (fn [response]
-                 (if (.-ok response)
-                   (if (and json (not= (.-status response) 204))
-                     (-> (.text response)
-                         (.then (fn [text]
-                                  (if-not (str/blank? text)
-                                    (js/JSON.parse text)
-                                    response))))
-                     response)
-                   (throw response)))))))
+(defn request->url [{:keys [url query-params]}]
+  (if (seq query-params)
+    (str url "?" (encode-query-params query-params))
+    url))
 
-(defn tokens-from-authorization-code+ [code]
-  (let [auth-options {:method "POST"
-                      :url "https://accounts.spotify.com/api/token"
-                      :headers {:Authorization (str "Basic "
-                                                    (-> (js/Buffer.from (str client-id ":" client-secret))
-                                                        (.toString "base64")))}
-                      :form {:grant_type "authorization_code"
-                             :code code
-                             :redirect_uri redirect-uri}
-                      :json true}]
-    (-> (fetch-request auth-options)
-        (.then (fn [^js body]
-                 (js/console.log body)
-                 body)))))
+(defn request->fetch-options [{:keys [method url headers query-params body form json signal]}]
+  (cond-> {:method (str/upper-case (name method))
+           :headers headers}
+    (map? body) (assoc :body (js/JSON.stringify (clj->js body)))
+    (and json (not form)) (update :headers assoc :Content-Type "application/json")
+    form (assoc :body (encode-form-params form))
+    signal (assoc :signal signal)
+    :always clj->js))
 
-(defn refresh-token+ [rtoken]
-  (let [auth-options {:method "POST"
-                      :url "https://accounts.spotify.com/api/token"
-                      :headers {:Authorization (str "Basic "
-                                                    (-> (js/Buffer.from (str client-id ":" client-secret))
-                                                        (.toString "base64")))}
-                      :form {:grant_type "refresh_token"
-                             :refresh_token rtoken}
-                      :json true}]
-    (-> (fetch-request auth-options)
-        (.then (fn [^js body]
-                 (let [token (.-access_token body)]
-                   (set! *access-token* token)
-                   token))))))
+(defn parse-json-response [response]
+  (if (.-ok response)
+    (if (not= (.-status response) 204)
+      (-> (.text response)
+          (.then (fn [text]
+                   (if-not (str/blank? text)
+                     (js/JSON.parse text)
+                     response))))
+      response)
+    (throw response)))
 
-(defn expired-token? [^js e]
-  (= (.-status e) 401))
-
-(defn add-authorization-header [opts]
-  (update opts :headers assoc :Authorization (str "Bearer " *access-token*)))
-
-(defn re-execute-context [{:keys [queue] :as ctx}]
-  (let [ctx (dissoc ctx :stack :queue)]
-    (js/Promise.
-     (fn [resolve reject]
-       (sieppari/execute-context queue ctx resolve reject)))))
+(def parse-json-response-interceptor
+  {:leave (fn [ctx]
+            (-> (js/Promise.resolve (:response ctx))
+                (.then parse-json-response)
+                (.then #(assoc ctx :response %))))})
 
 (def callbacks-interceptor
   {:enter (fn [{:keys [request] :as ctx}]
@@ -130,20 +96,8 @@
               (*after-request-callback* request))
             ctx)})
 
-(def refresh-interceptor
-  {:enter (fn [ctx]
-            (let [ctx (assoc ctx :refresh-ctx ctx)]
-              (if *access-token*
-                ctx
-                (-> (refresh-token+ refresh-token)
-                    (.then (fn [] ctx))))))
-   :error (fn [{:keys [error refresh-ctx stack] :as ctx}]
-            (if-not (expired-token? error)
-              ctx
-              ;; Naive implementation: we might get multiple refreshes for concurrent requests.
-              (-> (refresh-token+ refresh-token)
-                  (.then #(re-execute-context refresh-ctx))
-                  (.then #(assoc % :stack stack)))))})
+(defn add-authorization-header [opts]
+  (update opts :headers assoc :Authorization (str "Bearer " *access-token*)))
 
 (def authorize-interceptor
   {:enter (fn [ctx]
@@ -153,41 +107,128 @@
   {:leave (fn [ctx]
             (update ctx :response js->clj :keywordize-keys true))})
 
+(def timer-key ::timer-id)
+
+(defn make-timeout-signal-interceptor [timeout-ms]
+  {:enter (fn [ctx]
+            (let [controller (AbortController.)
+                  timer-id (js/setTimeout #(.abort controller) timeout-ms)]
+              (-> ctx (assoc timer-key timer-id)
+                  (assoc-in [:request :signal] (.-signal controller)))))
+   :leave (fn [ctx]
+            (js/clearTimeout (timer-key ctx))
+            ctx)
+   :error (fn [ctx]
+            (js/clearTimeout (timer-key ctx))
+            ctx)})
+
+(defn expired-token? [^js e]
+  (= (.-status e) 401))
+
+(defn request->fetch+ [request]
+  (fetch (request->url request)
+         (request->fetch-options request)))
+
+(def basic-request-interceptors
+  [parse-json-response-interceptor
+   (make-timeout-signal-interceptor 10000)
+   request->fetch+])
+
+(defn basic-request+ [opts]
+  (js/Promise.
+   (fn [resolve reject]
+     (sieppari/execute basic-request-interceptors opts resolve reject))))
+
+(defn tokens-from-authorization-code+ [code]
+  (let [auth-options {:method "POST"
+                      :url "https://accounts.spotify.com/api/token"
+                      :headers {:Authorization (str "Basic "
+                                                    (-> (js/Buffer.from (str client-id ":" client-secret))
+                                                        (.toString "base64")))}
+                      :form {:grant_type "authorization_code"
+                             :code code
+                             :redirect_uri redirect-uri}
+                      :json true}]
+    (-> (basic-request+ auth-options)
+        (.then (fn [^js body]
+                 (js/console.log body)
+                 body)))))
+
+(defn refresh-token+ [rtoken]
+  (let [auth-options {:method "POST"
+                      :url "https://accounts.spotify.com/api/token"
+                      :headers {:Authorization (str "Basic "
+                                                    (-> (js/Buffer.from (str client-id ":" client-secret))
+                                                        (.toString "base64")))}
+                      :form {:grant_type "refresh_token"
+                             :refresh_token rtoken}
+                      :json true}]
+    (-> (basic-request+ auth-options)
+        (.then (fn [^js body]
+                 (let [token (.-access_token body)]
+                   (set! *access-token* token)
+                   token))))))
+
+(defn re-execute-context [{:keys [queue] :as ctx}]
+  (let [ctx (dissoc ctx :stack :queue)]
+    (js/Promise.
+     (fn [resolve reject]
+       (sieppari/execute-context queue ctx resolve reject)))))
+
+(def refresh-interceptor
+  {:enter (fn [ctx]
+            (let [ctx (assoc ctx ::refresh-ctx ctx)]
+              (if *access-token*
+                ctx
+                (-> (refresh-token+ refresh-token)
+                    (.then (fn [] ctx))))))
+   :error (fn [{:keys [error stack] :as ctx}]
+            (if-not (expired-token? error)
+              ctx
+              ;; Naive implementation: we might get multiple refreshes for concurrent requests.
+              (-> (refresh-token+ refresh-token)
+                  (.then #(re-execute-context (::refresh-ctx ctx)))
+                  (.then #(assoc % :stack stack)))))})
+
 (def request-interceptors
-  [callbacks-interceptor
+  [;js->clj-response-interceptor
+   parse-json-response-interceptor
+   callbacks-interceptor
    refresh-interceptor
    authorize-interceptor
-   fetch-request])
+   (make-timeout-signal-interceptor 10000)
+   request->fetch+])
 
-(defn request-with-auto-refresh+ [opts]
+(defn request+ [opts]
   (js/Promise.
    (fn [resolve reject]
      (sieppari/execute request-interceptors opts resolve reject))))
 
-(defn request
-  ([url] (request url nil))
-  ([url {:keys [method query-params body]}]
-   (cond-> {:method (str/upper-case (name method))
-            :url (if (seq query-params)
-                   (str url "?" (encode-query-params query-params))
-                   url)
-            :json true}
-     (map? body) (assoc :body (clj->js body)))))
-
 (defn get-request
   ([url] (get-request url nil))
   ([url opts]
-   (request url (assoc opts :method :get))))
+   (assoc opts
+          :method :get
+          :url url
+          :json true)))
 
 (defn put+
   ([url] (put+ url nil))
   ([url opts]
-   (request-with-auto-refresh+ (request url (assoc opts :method :put)))))
+   (request+
+    (assoc opts
+           :method :put
+           :url url
+           :json true))))
 
 (defn post+
   ([url] (post+ url nil))
   ([url opts]
-   (request-with-auto-refresh+ (request url (assoc opts :method :post)))))
+   (request+
+    (assoc opts
+           :method :post
+           :url url
+           :json true))))
 
 (defn get-clj+ [& args]
   (js/Promise.
@@ -199,12 +240,12 @@
       reject))))
 
 (defn delete-request [url]
-  {:method "DELETE"
+  {:method :delete
    :url url
    :json true})
 
 (defn delete+ [url]
-  (request-with-auto-refresh+ (delete-request url)))
+  (request+ (delete-request url)))
 
 (defn get-playlists []
   (get-request "https://api.spotify.com/v1/me/playlists"))
