@@ -1,6 +1,7 @@
 (ns intools.spotin.model.spotify
   (:refer-clojure :exclude [get])
   (:require [abort-controller :refer [AbortController]]
+            [clojure.core :as clojure]
             [clojure.string :as str]
             [node-fetch :as fetch]
             [sieppari.core :as sieppari])
@@ -37,6 +38,10 @@
        "&redirect_uri=" (js/encodeURIComponent redirect-uri)
        "&client_id=" (js/encodeURIComponent client-id)))
 
+(def content-types
+  {:form "application/x-www-form-urlencoded"
+   :json "application/json"})
+
 (defn encode-form-params [form-params]
   (reduce (fn [params [k v]]
             (.append params (name k) v)
@@ -55,12 +60,19 @@
     (str url "?" (encode-query-params query-params))
     url))
 
-(defn request->fetch-options [{:keys [method url headers query-params body form json signal]}]
+(defn request->fetch-options [{:keys [method url headers query-params body content-type accept signal]}]
   (cond-> {:method (str/upper-case (name method))
            :headers headers}
-    (map? body) (assoc :body (js/JSON.stringify (clj->js body)))
-    (and json (not form)) (update :headers assoc :Content-Type "application/json")
-    form (assoc :body (encode-form-params form))
+
+    (and (= content-type :json) (map? body))
+    (-> (assoc :body (js/JSON.stringify (clj->js body)))
+        (update :headers assoc :Content-Type (clojure/get content-types content-type)))
+
+    (and (= content-type :form) (map? body))
+    (-> (assoc :body (encode-form-params body))
+        (update :headers assoc :Content-Type (clojure/get content-types content-type)))
+
+    accept (update :headers assoc :Accept (clojure/get content-types accept))
     signal (assoc :signal signal)
     :always clj->js))
 
@@ -146,10 +158,11 @@
                       :headers {:Authorization (str "Basic "
                                                     (-> (js/Buffer.from (str client-id ":" client-secret))
                                                         (.toString "base64")))}
-                      :form {:grant_type "authorization_code"
+                      :content-type :form
+                      :accept :json
+                      :body {:grant_type "authorization_code"
                              :code code
-                             :redirect_uri redirect-uri}
-                      :json true}]
+                             :redirect_uri redirect-uri}}]
     (-> (basic-request+ auth-options)
         (.then (fn [^js body]
                  (js/console.log body)
@@ -161,9 +174,10 @@
                       :headers {:Authorization (str "Basic "
                                                     (-> (js/Buffer.from (str client-id ":" client-secret))
                                                         (.toString "base64")))}
-                      :form {:grant_type "refresh_token"
-                             :refresh_token rtoken}
-                      :json true}]
+                      :content-type :form
+                      :accept :json
+                      :body {:grant_type "refresh_token"
+                             :refresh_token rtoken}}]
     (-> (basic-request+ auth-options)
         (.then (fn [^js body]
                  (let [token (.-access_token body)]
@@ -206,16 +220,16 @@
      (sieppari/execute request-interceptors opts resolve reject))))
 
 (defn get [url & [opts]]
-  (assoc opts :method :get :url url :json true))
+  (assoc opts :method :get :url url :content-type :json :accept :json))
 
 (defn put [url & [opts]]
-  (assoc opts :method :put :url url :json true))
+  (assoc opts :method :put :url url :content-type :json :accept :json))
 
 (defn post [url & [opts]]
-  (assoc opts :method :post :url url :json true))
+  (assoc opts :method :post :url url :content-type :json :accept :json))
 
 (defn delete [url & [opts]]
-  (assoc opts :method :delete :url url :json true))
+  (assoc opts :method :delete :url url :content-type :json :accept :json))
 
 (defn paginated-get+ [initial-url]
   (let [!items (atom nil)]
