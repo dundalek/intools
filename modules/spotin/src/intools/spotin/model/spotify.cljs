@@ -227,19 +227,10 @@
   ([url opts]
    (request+ (post url opts))))
 
-(defn get-clj+ [& args]
-  (request+ (apply get args)))
-
-(defn delete+ [url]
-  (request+ (delete url)))
-
-(defn get-playlists []
-  (get "https://api.spotify.com/v1/me/playlists"))
-
 (defn paginated-get+ [initial-url]
   (let [!items (atom nil)]
     (letfn [(fetch-page+ [url]
-              (-> (get-clj+ url)
+              (-> (request+ (get url))
                   (.then (fn [{:keys [items next]}]
                            (swap! !items concat items)
                            (if next
@@ -247,53 +238,53 @@
                              {:items @!items})))))]
       (fetch-page+ initial-url))))
 
-(defn get-playlist+ [playlist-id]
-  (get-clj+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id))))
+(defn get-playlist [playlist-id]
+  (get (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id))))
 
 (defn get-all-playlists+ []
   (paginated-get+ "https://api.spotify.com/v1/me/playlists?limit=50"))
 
 (defn get-playlist-tracks+ [playlist-id]
   ;; TODO use paginated-get+
-  (get-clj+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id) "/tracks")
-            {:query-params {:limit 100}}))
+  (request+ (get (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id) "/tracks")
+                 {:query-params {:limit 100}})))
 
-(defn playlist-change+ [playlist-id body]
-  (put+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id))
-        {:body body}))
+(defn playlist-change [playlist-id body]
+  (put (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id))
+       {:body body}))
 
-(defn playlist-unfollow+ [playlist-id]
-  (delete+ (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id) "/followers")))
+(defn playlist-unfollow [playlist-id]
+  (delete (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id) "/followers")))
 
-(defn get-album+ [album-id]
-  (get-clj+ (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id))))
+(defn get-album [album-id]
+  (get (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id))))
 
 (defn get-album-tracks+ [album-id]
   ;; TODO use paginated-get+
-  (get-clj+ (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id) "/tracks")
-            {:query-params {:limit 50}}))
+  (request+ (get (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id) "/tracks")
+                 {:query-params {:limit 50}})))
 
-(defn get-artist+ [artist-id]
-  (get-clj+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id))))
+(defn get-artist [artist-id]
+  (get (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id))))
 
 (defn get-artist-albums+ [artist-id]
   ;; TODO use paginated-get+
   ;; TODO include appears_on,compilation album groups later, needs thinking about how to fit them in the UI
-  (get-clj+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/albums")
-            {:query-params {:limit 50 :include_groups "album,single"}}))
+  (request+ (get (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/albums")
+                 {:query-params {:limit 50 :include_groups "album,single"}})))
 
-(defn get-artist-top-tracks+ [artist-id]
-  (get-clj+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/top-tracks")
-            {:query-params {:market "from_token"}}))
+(defn get-artist-top-tracks [artist-id]
+  (get (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/top-tracks")
+       {:query-params {:market "from_token"}}))
 
-(defn get-artist-related-artists+ [artist-id]
-  (get-clj+ (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/related-artists")))
+(defn get-artist-related-artists [artist-id]
+  (get (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/related-artists")))
 
-(defn get-player+ []
-  (get-clj+ "https://api.spotify.com/v1/me/player"))
+(defn get-player []
+  (get "https://api.spotify.com/v1/me/player"))
 
-(defn get-player-devices+ []
-  (get-clj+ "https://api.spotify.com/v1/me/player/devices"))
+(defn get-player-devices []
+  (get "https://api.spotify.com/v1/me/player/devices"))
 
 (defn create-playlist+ [user-id {:keys [_name _public _collaborative _description] :as body}]
   (post+ (str "https://api.spotify.com/v1/users/" user-id "/playlists")
@@ -329,11 +320,6 @@
   (put+ (str "https://api.spotify.com/v1/me/player/shuffle")
         {:query-params {:state (if state "true" "false")}}))
 
-(defn player-toggle-shuffle+ []
-  (-> (get-player+)
-      (.then (fn [{:keys [shuffle_state]}]
-               (player-shuffle+ (not shuffle_state))))))
-
 ;; repeat_state
 (def repeat-state-transition
   {"context" "track"
@@ -344,11 +330,6 @@
   (put+ (str "https://api.spotify.com/v1/me/player/repeat")
         {:query-params {:state state}}))
 
-(defn player-toggle-repeat+ []
-  (-> (get-player+)
-      (.then (fn [{:keys [repeat_state]}]
-               (player-repeat+ (repeat-state-transition repeat_state))))))
-
 (defn player-next+ []
   (post+ "https://api.spotify.com/v1/me/player/next"))
 
@@ -356,12 +337,12 @@
   (post+ "https://api.spotify.com/v1/me/player/previous"))
 
 (defn user-id+ []
-  (-> (get-clj+ "https://api.spotify.com/v1/me")
+  (-> (request+ (get "https://api.spotify.com/v1/me"))
       (.then (fn [body]
                (:id body)))))
 
 (defn auto-select-device+ []
-  (-> (get-player-devices+)
+  (-> (request+ (get-player-devices))
       (.then (fn [{:keys [devices]}]
                (if (= (count devices) 1)
                  (let [device-id (-> devices first :id)]

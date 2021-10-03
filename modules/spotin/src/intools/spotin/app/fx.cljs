@@ -75,7 +75,7 @@
 
 (reg-fx :playlist-unfollow
   (fn [playlist-id]
-    (-> (spotify/playlist-unfollow+ playlist-id)
+    (-> (spotify/request+ (spotify/playlist-unfollow playlist-id))
         ;; TODO: maybe only refresh the single playlist
         (.then #(dispatch [:spotin/refresh-playlists])))))
 
