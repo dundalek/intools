@@ -326,10 +326,8 @@
 (defn player-previous []
   (post "https://api.spotify.com/v1/me/player/previous"))
 
-(defn user-id+ []
-  (-> (request+ (get "https://api.spotify.com/v1/me"))
-      (.then (fn [body]
-               (:id body)))))
+(defn current-user []
+  (get "https://api.spotify.com/v1/me"))
 
 (defn auto-select-device+ []
   (-> (request+ (get-player-devices))

@@ -26,11 +26,12 @@
                                      (map :items)
                                      (generate-mixed-playlist)
                                      (map #(get-in % [:track :uri])))]
-                 (-> (spotify/user-id+)
-                     (.then (fn [user-id]
+                 (-> (spotify/request+ (spotify/current-user))
+                     (.then (fn [user]
                               ;; TODO: add description - will need to fetch playlists for their name
                               ;;:description (str "Generated from: " (str/join ", " (map :name playlists)))})
-                              (let [playlist-name (str "Generated-" (+ 100 (rand-int 900)))]
+                              (let [user-id (:id user)
+                                    playlist-name (str "Generated-" (+ 100 (rand-int 900)))]
                                 (spotify/request+ (spotify/create-playlist user-id {:name playlist-name})))))
                      (.then (fn [body]
                               (let [playlist-id (:id body)]
