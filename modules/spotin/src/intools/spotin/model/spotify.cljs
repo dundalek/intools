@@ -192,10 +192,10 @@
                   (.then #(assoc % :stack stack)))))})
 
 (def request-interceptors
-  [js->clj-response-interceptor
-   parse-json-response-interceptor
-   callbacks-interceptor
+  [callbacks-interceptor
    refresh-interceptor
+   js->clj-response-interceptor
+   parse-json-response-interceptor
    authorize-interceptor
    (make-timeout-signal-interceptor 10000)
    request->fetch+])
