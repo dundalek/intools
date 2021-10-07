@@ -88,7 +88,8 @@
    {:name "open album"
     :event [:spotin/open-track-album]}
    ;; - TBD Go to song radio
-   ;;{:name "TBD add to queue"}
+   {:name "add to queue"
+    :event [:spotin/queue-track]}
    ;;{:id :like
    ;; :name "TBD add to Liked Songs"}
    ;;{:id :add-to-library

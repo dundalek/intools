@@ -298,6 +298,10 @@
   (put "https://api.spotify.com/v1/me/player"
        {:body {:device_ids [device-id]}}))
 
+(defn player-queue [uri]
+  (post "https://api.spotify.com/v1/me/player/queue"
+        {:query-params {:uri uri}}))
+
 (defn player-volume [volume-percent]
   (put "https://api.spotify.com/v1/me/player/volume"
        {:query-params {:volume_percent volume-percent}}))

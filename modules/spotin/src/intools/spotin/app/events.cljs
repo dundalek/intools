@@ -72,6 +72,10 @@
     ;; TODO multiple artists, perhaps show a menu
     (open-artist-fx db (-> item :artists first :id))))
 
+(reg-event-fx :spotin/queue-track
+  (fn [_ [_ {:keys [item]}]]
+    {:spotin/queue-track (-> item :uri)}))
+
 (reg-event-fx :spotin/open-artist
   (fn [{db :db} [_ {:keys [item]}]]
     (open-artist-fx db (:id item))))

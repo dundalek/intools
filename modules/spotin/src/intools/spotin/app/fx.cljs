@@ -11,21 +11,24 @@
   (and (fetch-error? err)
        (= (.-status err) 404)))
 
-(defn with-playback-refresh+ [request]
+(defn with-auto-select-device+ [make-request]
   (-> (let [playback (.getQueryData @!query-client "player")]
         (if (spotify/playback-stopped? playback)
           (spotify/auto-select-device+)
           ;; TODO: show device picker if auto-connect fails
           (js/Promise.resolve)))
-      (.then #(spotify/request+ (request)))
+      (.then #(spotify/request+ (make-request)))
       (.catch (fn [err]
                 (if (error-not-found? err)
                   (-> (spotify/auto-select-device+)
-                      (.then #(spotify/request+ (request)))
+                      (.then #(spotify/request+ (make-request)))
                       (.catch (fn [_]
                                 (throw err))))
                   ;; TODO open the device picker when multiple devices are listed
-                  (throw err))))
+                  (throw err))))))
+
+(defn with-playback-refresh+ [make-request]
+  (-> (with-auto-select-device+ make-request)
       (.finally #(.invalidateQueries @!query-client "player"))))
 
 (reg-fx :next
@@ -59,6 +62,10 @@
         (with-playback-refresh+ #(spotify/player-play opts)))
       (with-playback-refresh+ #(spotify/player-play {:context_uri (:uri context)
                                                      :offset {:uri (:uri item)}})))))
+
+(reg-fx :spotin/queue-track
+  (fn [uri]
+    (with-auto-select-device+ #(spotify/player-queue uri))))
 
 (reg-fx :spotin/player-transfer
   (fn [device-id]
