@@ -69,6 +69,10 @@
   (fn [uri]
     (with-auto-select-device+ #(spotify/player-queue uri))))
 
+(reg-fx :spotin/player-seek
+  (fn [position-ms]
+    (with-auto-select-device+ #(spotify/player-seek position-ms))))
+
 (reg-fx :spotin/player-transfer
   (fn [device-id]
     (with-playback-refresh+ #(spotify/player-transfer device-id))))

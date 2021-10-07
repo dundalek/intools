@@ -14,7 +14,7 @@
    {:id :previous
     :name "previous"
     :shortcut "b"
-    :event [:spotin/dispatch-fx :previous]}
+    :event [:spotin/player-previous]}
    {:id :shuffle
     :name "shuffle"
     :shortcut "s"}

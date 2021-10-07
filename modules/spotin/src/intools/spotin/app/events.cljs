@@ -80,6 +80,18 @@
   (fn [{db :db} [_ {:keys [item]}]]
     (open-artist-fx db (:id item))))
 
+(reg-event-fx :spotin/player-previous
+  [(inject-cofx :query-data "player")]
+  (fn [{:keys [query-data]}]
+    ;; When pressing back we seek to beginning of the current track.
+    ;; Only after pressing back again while close to the beginning of the track
+    ;; will go to previous track. Spotify seems to consider ~2s as close to
+    ;; the beggining, let's use 8s as a safety margin due to possible delays.
+    ;; TODO: do optimistic seek, should also help with lowering the safety margin
+    (if (< (:progress_ms query-data) 8000)
+      {:previous nil}
+      {:spotin/player-seek 0})))
+
 (reg-event-fx :spotin/open-currently-playing
   [(inject-cofx :query-data "player")]
   (fn [{:keys [db query-data]}]
