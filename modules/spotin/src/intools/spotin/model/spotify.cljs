@@ -27,6 +27,10 @@
 (defonce ^:dynamic *after-request-callback* nil)
 (defonce ^:dynamic *request-error-callback* nil)
 
+;; Playback API does not seem to have Read-your-writes consistency,
+;; wait 2 seconds before trying to fetch status update.
+(def player-update-delay 2000)
+
 (defn uri->id [uri]
   (-> (str/split uri #":")
       (nth 2)))

@@ -30,13 +30,11 @@
                       :onSettled (fn []
                                     ;; Count 1 means to only invalidate if we are the last mutation
                                    (when (= (.isMutating @!query-client) 1)
-                                      ;; Playback API does not seem to have Read-your-writes consistency,
-                                      ;; delay for a second before trying to fetch status update
                                      (js/setTimeout (fn []
                                                       (when (= (.isMutating @!query-client) 0)
                                                         (.cancelQueries @!query-client query-key)
                                                         (.invalidateQueries @!query-client query-key)))
-                                                    1000)))})
+                                                    spotify/player-update-delay)))})
         mutate (.-mutate mutation)
         mutate-update (react/useCallback
                        (fn []

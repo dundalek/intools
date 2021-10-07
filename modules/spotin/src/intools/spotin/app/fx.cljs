@@ -29,7 +29,9 @@
 
 (defn with-playback-refresh+ [make-request]
   (-> (with-auto-select-device+ make-request)
-      (.finally #(.invalidateQueries @!query-client "player"))))
+      (.finally (fn []
+                  (js/setTimeout #(.invalidateQueries @!query-client "player")
+                                 spotify/player-update-delay)))))
 
 (reg-fx :next
   (fn [_] (with-playback-refresh+ spotify/player-next)))
