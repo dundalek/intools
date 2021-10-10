@@ -61,7 +61,28 @@
 (defn volume-down [value]
   (Math/max 0 (- value 10)))
 
+(defn terminal-title [title]
+  (str "\u001B]0;" title "\u0007"))
+
+(defn use-app-title []
+  (let [{:keys [item]} (.-data (query/use-player))
+        title (str (when item
+                     (str (:name item)
+                          "  ·  "
+                          (->> item :artists
+                               (map :name)
+                               (str/join ", "))
+                          "  ·  "))
+                   "spotin")
+        write (.-write (ink/useStdout))]
+    (react/useEffect
+     (fn []
+       (write (terminal-title title))
+       js/undefined)
+     #js [title])))
+
 (defn app []
+  (use-app-title)
   #_(hooks/use-fullscreen)
   (let [app (ink/useApp)
         size (hooks/use-window-size)
