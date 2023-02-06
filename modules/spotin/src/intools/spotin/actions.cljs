@@ -133,3 +133,21 @@
    ;;{:name "TBD Follow"}])
    ;;{:name "TBD Go to artist radio"}
    ;;{:name "TBD Share"}])
+
+(def ^:private included-in-shortcuts-bar?
+  #{:play-pause
+    :next
+    :previous
+    :spotin/devices})
+
+(def shortcuts-bar-actions
+  (concat [{:shortcut "x"
+            :name "menu"}]
+          [{:shortcut "/"
+            :name "search"}]
+          (->> player-actions
+               (filter (fn [{:keys [shortcut id]}]
+                         (and (some? shortcut)
+                              (included-in-shortcuts-bar? id)))))
+          [{:shortcut "q"
+            :name "quit"}]))

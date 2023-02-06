@@ -1,20 +1,26 @@
 (ns intools.spotin.containers
-  (:require [clojure.string :as str]
-            [ink :refer [Box Text]]
-            [intools.search :as search]
-            [intools.spotin.actions :refer [action-separator album-actions artist-actions artist-tracks-actions player-actions playlist-actions playlists-actions tracks-actions]]
-            [intools.spotin.app.query :as query]
-            [intools.spotin.components.action-menu :as action-menu]
-            [intools.spotin.components.artist-panel :as artist-panel]
-            [intools.spotin.components.confirmation-modal :as confirmation-modal]
-            [intools.spotin.components.device-menu :as device-menu]
-            [intools.spotin.components.error-alert :as error-alert]
-            [intools.spotin.components.input-bar :as input-bar]
-            [intools.spotin.components.playlists-panel :as playlists-panel]
-            [intools.spotin.components.status-bar :as status-bar]
-            [intools.spotin.components.tracks-panel :refer [album-header album-track-item playlist-header playlist-track-item tracks-panel]]
-            [re-frame.core :refer [dispatch subscribe]]
-            [react]))
+  (:require
+   [clojure.string :as str]
+   [ink :refer [Box Text]]
+   [intools.search :as search]
+   [intools.spotin.actions :as actions :refer [action-separator album-actions
+                                               artist-actions artist-tracks-actions player-actions
+                                               playlist-actions playlists-actions tracks-actions]]
+   [intools.spotin.app.query :as query]
+   [intools.spotin.components.action-menu :as action-menu]
+   [intools.spotin.components.artist-panel :as artist-panel]
+   [intools.spotin.components.confirmation-modal :as confirmation-modal]
+   [intools.spotin.components.device-menu :as device-menu]
+   [intools.spotin.components.error-alert :as error-alert]
+   [intools.spotin.components.input-bar :as input-bar]
+   [intools.spotin.components.playlists-panel :as playlists-panel]
+   [intools.spotin.components.shortcuts-bar :as shortcuts-bar]
+   [intools.spotin.components.status-bar :as status-bar]
+   [intools.spotin.components.tracks-panel :refer [album-header
+                                                   album-track-item playlist-header
+                                                   playlist-track-item tracks-panel]]
+   [re-frame.core :refer [dispatch subscribe]]
+   [react]))
 
 (defn playlist-rename-input-panel [{:keys [id name]}]
   (let [mutation (query/use-optimistic-playlist-mutation {:playlist-id id
@@ -280,3 +286,6 @@
   (when-some [error @(subscribe [:spotin/error])]
     [:f> error-alert/error-alert {:error error
                                   :on-dismiss #(dispatch [:spotin/clear-error])}]))
+
+(defn shortcuts-bar []
+  [shortcuts-bar/shortcuts-bar {:actions actions/shortcuts-bar-actions}])

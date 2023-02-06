@@ -4,15 +4,15 @@
    [goog.object :as gobj]
    [ink :refer [Box]]
    [intools.hooks :as hooks]
-   [intools.spotin.actions :refer [player-actions playlist-actions tracks-actions]]
+   [intools.spotin.actions :as actions]
    [intools.spotin.app.cofx]
    [intools.spotin.app.events]
    [intools.spotin.app.fx]
    [intools.spotin.app.mutations :as mutations]
    [intools.spotin.app.query :as query :refer [!query-client]]
    [intools.spotin.app.subs]
-   [intools.spotin.components.shortcuts-bar :refer [shortcuts-bar]]
    [intools.spotin.containers :as containers]
+   [intools.spotin.lib.terminal-title :as terminal-title]
    [intools.spotin.model.spotify :as spotify]
    [re-frame.core :as rf :refer [dispatch subscribe]]
    [react]
@@ -24,24 +24,6 @@
 
 (def sidepanel-width "22%")
 
-(def included-in-shortcuts-bar?
-  #{:play-pause
-    :next
-    :previous
-    :spotin/devices})
-
-(def shortcuts-bar-actions
-  (concat [{:shortcut "x"
-            :name "menu"}]
-          [{:shortcut "/"
-            :name "search"}]
-          (->> player-actions
-               (filter (fn [{:keys [shortcut id]}]
-                         (and (some? shortcut)
-                              (included-in-shortcuts-bar? id)))))
-          [{:shortcut "q"
-            :name "quit"}]))
-
 (defn use-play-pause-mutate []
   (let [play-pause-mutation (query/use-optimistic-mutation mutations/play-pause)]
     (react/useCallback (fn []
@@ -51,17 +33,6 @@
                                  ;; TODO: show device picker if auto-connect fails
                                  (.then #(spotify/request+ (spotify/player-play))))
                              (.mutate play-pause-mutation)))))))
-
-(defn terminal-title [title]
-  (str "\u001B]0;" title "\u0007"))
-
-(defn use-terminal-title [title]
-  (let [write (.-write (ink/useStdout))]
-    (react/useEffect
-     (fn []
-       (write (terminal-title title))
-       js/undefined)
-     #js [title])))
 
 (defn app-title []
   (let [{:keys [item]} (:data @(subscribe [:spotin/player]))
@@ -73,7 +44,7 @@
                                (str/join ", "))
                           "  ·  "))
                    "spotin")]
-    (use-terminal-title title)
+    (terminal-title/use-terminal-title title)
     nil))
 
 (defn app []
@@ -138,9 +109,9 @@
                    (.exit js/process))
            (when-some [{:keys [shortcut] :as action} (->> (case active-focus-id
                                                             "action-menu" actions
-                                                            "playlists-panel" (concat playlist-actions player-actions)
-                                                            "tracks-panel" (concat tracks-actions player-actions)
-                                                            player-actions)
+                                                            "playlists-panel" (concat actions/playlist-actions actions/player-actions)
+                                                            "tracks-panel" (concat actions/tracks-actions actions/player-actions)
+                                                            actions/player-actions)
                                                           (some (fn [{:keys [shortcut] :as action}]
                                                                   (when (= shortcut input) action))))]
              (let [actions-focused? (= active-focus-id "action-menu")
@@ -179,7 +150,7 @@
         :artist [:f> containers/artist-panel (-> current-route :params :artist-id)]
         nil)]
      [:f> containers/playback-status-bar]
-     [shortcuts-bar {:actions shortcuts-bar-actions}]]))
+     [containers/shortcuts-bar]]))
 
 (defn app-wrapper []
   [:> QueryClientProvider {:client @!query-client}
