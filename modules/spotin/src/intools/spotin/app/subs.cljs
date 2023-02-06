@@ -1,7 +1,10 @@
 (ns intools.spotin.app.subs
-  (:require [intools.search :as search]
-            [intools.spotin.app.core :as app]
-            [re-frame.core :refer [reg-sub]]))
+  (:require
+   [intools.search :as search]
+   [intools.spotin.app.core :as app]
+   [intools.spotin.app.query :as query]
+   [intools.spotin.lib.query :refer [reg-query-sub]]
+   [re-frame.core :refer [reg-sub]]))
 
 (reg-sub :spotin/error
   (fn [db]
@@ -58,3 +61,25 @@
 (reg-sub :spotin/active-input-panel
   (fn [db]
     (:active-input-panel db)))
+
+(reg-query-sub :spotin/player query/player)
+
+(reg-query-sub :spotin/playlists query/playlists)
+
+(reg-query-sub :spotin/playlist query/playlist)
+
+(reg-query-sub :spotin/playlist-tracks query/playlist-tracks)
+
+(reg-query-sub :spotin/artist query/artist)
+
+(reg-query-sub :spotin/artist-albums query/artist-albums)
+
+(reg-query-sub :spotin/artist-top-tracks query/artist-top-tracks)
+
+(reg-query-sub :spotin/artist-related-artists query/artist-related-artists)
+
+(reg-query-sub :spotin/devices query/devices)
+
+(reg-query-sub :spotin/album query/album)
+
+(reg-query-sub :spotin/album-tracks query/album-tracks)

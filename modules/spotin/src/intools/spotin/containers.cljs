@@ -41,14 +41,15 @@
       :on-cancel #(dispatch [:close-input-panel])}]))
 
 (defn playlists-panel []
-  (let [player-query (query/use-player)
-        playback-context-uri (let [status (.-data player-query)]
-                               (when (:is_playing status)
-                                 (-> status :context :uri)))
+  (let [player (:data @(subscribe [:spotin/player]))
+        playback-context-uri (when (:is_playing player)
+                               (-> player :context :uri))
         playlist-search-query @(subscribe [:spotin/playlist-search-query])
-        current-route @(subscribe [:spotin/current-route])]
+        current-route @(subscribe [:spotin/current-route])
+        playlists (:data @(subscribe [:spotin/playlists]))]
     [:f> playlists-panel/playlists-panel
      {:focus-id "playlists-panel"
+      :playlists playlists
       :selected-playlist-id (-> current-route :params :playlist-id)
       :search-query playlist-search-query
       :playback-context-uri playback-context-uri
@@ -85,8 +86,9 @@
       :on-cancel #(dispatch [:close-action-menu])}]))
 
 (defn devices-menu [{:keys [width]}]
-  (let [query (query/use-devices)
-        actions (->> query .-data :devices
+  (let [actions (->> @(subscribe [:spotin/devices])
+                     :data
+                     :devices
                      (map #(select-keys % [:id :name :type :is_active])))]
     [:f> action-menu/action-menu
      {:actions actions
@@ -99,8 +101,8 @@
                      (dispatch [:spotin/player-transfer id]))}]))
 
 (defn main-tracks-panel [{:keys [header context-item tracks-filtered track-item-component]}]
-  (let [player-query (query/use-player)
-        playback-item-uri (-> player-query .-data :item :uri)
+  (let [player (:data @(subscribe [:spotin/player]))
+        playback-item-uri (-> player :item :uri)
         track-search-query @(subscribe [:spotin/track-search-query])]
     [:f> tracks-panel {:focus-id "tracks-panel"
                        :header header
@@ -130,10 +132,9 @@
 
 (defn playlist-tracks-panel [playlist-id]
   (let [search-query @(subscribe [:spotin/track-search-query])
-        query (query/use-playlist playlist-id)
-        context-item (.-data query)
-        tracks-query (query/use-playlist-tracks playlist-id)
-        all-tracks (-> tracks-query .-data :items)
+        context-item (:data @(subscribe [:spotin/playlist playlist-id]))
+        all-tracks (-> @(subscribe [:spotin/playlist-tracks playlist-id])
+                       :data :items)
         tracks-filtered (react/useMemo
                          #(->> all-tracks
                                (map :track)
@@ -147,10 +148,10 @@
 
 (defn album-tracks-panel [album-id]
   (let [search-query @(subscribe [:spotin/track-search-query])
-        query (query/use-albums album-id)
-        context-item (.-data query)
-        tracks-query (query/use-album-tracks album-id)
-        all-tracks (-> tracks-query .-data :items)
+        context-item (:data @(subscribe [:spotin/album album-id]))
+        all-tracks (-> @(subscribe [:spotin/album-tracks album-id])
+                       :data
+                       :items)
         tracks-filtered (react/useMemo
                          #(->> all-tracks
                                (search-tracks search-query))
@@ -169,8 +170,9 @@
        (sort-by :release_date #(compare %2 %1))))
 
 (defn artist-top-track-sub-panel [{:keys [artist-id artist]}]
-  (let [top-tracks-query (query/use-artist-top-tracks artist-id)
-        top-tracks (-> top-tracks-query .-data :tracks)]
+  (let [top-tracks (-> @(subscribe [:spotin/artist-top-tracks artist-id])
+                       :data
+                       :tracks)]
     [:f> artist-panel/artist-sub-panel
      {:focus-id "artist-top-tracks"
       :header [:> Box {:height 1 :justify-content "space-between"}
@@ -191,8 +193,9 @@
                                                                  :context artist}]))}]))
 
 (defn artist-related-artists-sub-panel [{:keys [artist-id artist]}]
-  (let [related-artists-query (query/use-artist-related-artists artist-id)
-        related-artists (-> related-artists-query .-data :artists)]
+  (let [related-artists (-> @(subscribe [:spotin/artist-related-artists artist-id])
+                            :data
+                            :artists)]
     [:f> artist-panel/artist-sub-panel
      {:focus-id "artist-related-artists"
       :header [:> Box {:height 1 :justify-content "space-between"}
@@ -227,10 +230,10 @@
                                                       :context artist}]))}])
 
 (defn artist-panel [artist-id]
-  (let [artist-query (query/use-artist artist-id)
-        artist (.-data artist-query)
-        albums-query (query/use-artist-albums artist-id)
-        albums (-> albums-query .-data :items)
+  (let [artist (:data @(subscribe [:spotin/artist artist-id]))
+        albums (-> @(subscribe [:spotin/artist-albums artist-id])
+                   :data
+                   :items)
         groups (group-by :album_group albums)]
     [:> Box {:flex-direction "column"
              :flex-grow 1}
@@ -257,8 +260,7 @@
                                              :artist artist}]]]))
 
 (defn playback-status-bar []
-  (let [query (query/use-player)
-        playback (.-data query)]
+  (let [playback (:data @(subscribe [:spotin/player]))]
     [:f> status-bar/status-bar {:playback playback
                                 :pending-requests @(subscribe [:spotin/pending-requests])}]))
 

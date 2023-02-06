@@ -12,7 +12,8 @@
                 ;; For spotin, TODO add a separate profile
                 io.github.metosin/sieppari {; does not seem to be properly tagged
                                             ; :git/tag "0.0.0-alpha13"
-                                            :git/sha "3c21c7d15e6cc571fab4b92ec90e3200b23860af"}}
+                                            :git/sha "3c21c7d15e6cc571fab4b92ec90e3200b23860af"}
+                cljs-bean/cljs-bean {:mvn/version "1.9.0"}}
    :main-opts ["-m" "shadow.cljs.devtools.cli"]
    :extra-paths ["lib/src"
                  "modules/dkmsin/src"

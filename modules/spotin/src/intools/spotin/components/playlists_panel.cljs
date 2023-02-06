@@ -16,10 +16,9 @@
      [:> Text (assoc props :wrap "truncate-end")
       (str (when is-highlighted playback-indicator) " " name)]]))
 
-(defn playlists-panel [{:keys [focus-id selected-playlist-id search-query playback-context-uri
+(defn playlists-panel [{:keys [focus-id selected-playlist-id search-query playback-context-uri playlists
                                on-activate on-menu on-search-change on-search-cancel]}]
-  (let [query (query/use-playlists)
-        all-playlists (:items (.-data query))
+  (let [all-playlists (:items playlists)
         playlists (react/useMemo
                    (fn [] (search/filter-by search-query :name all-playlists))
                    #js [all-playlists search-query])

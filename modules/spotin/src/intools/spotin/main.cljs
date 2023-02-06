@@ -64,8 +64,16 @@
 (defn terminal-title [title]
   (str "\u001B]0;" title "\u0007"))
 
-(defn use-app-title []
-  (let [{:keys [item]} (.-data (query/use-player))
+(defn use-terminal-title [title]
+  (let [write (.-write (ink/useStdout))]
+    (react/useEffect
+     (fn []
+       (write (terminal-title title))
+       js/undefined)
+     #js [title])))
+
+(defn app-title []
+  (let [{:keys [item]} (:data @(subscribe [:spotin/player]))
         title (str (when item
                      (str (:name item)
                           "  ·  "
@@ -73,16 +81,11 @@
                                (map :name)
                                (str/join ", "))
                           "  ·  "))
-                   "spotin")
-        write (.-write (ink/useStdout))]
-    (react/useEffect
-     (fn []
-       (write (terminal-title title))
-       js/undefined)
-     #js [title])))
+                   "spotin")]
+    (use-terminal-title title)
+    nil))
 
 (defn app []
-  (use-app-title)
   #_(hooks/use-fullscreen)
   (let [app (ink/useApp)
         size (hooks/use-window-size)
@@ -179,6 +182,7 @@
     [:> Box {:width (:cols size)
              :height (dec (:rows size))
              :flex-direction "column"}
+     [:f> app-title]
      [containers/error-alert]
      [containers/confirmation-modal]
      (case (:type active-input-panel)
@@ -224,8 +228,8 @@
   (set! spotify/*after-request-callback* #(dispatch [:spotin/request-finished]))
   (set! spotify/*request-error-callback* (fn [error request]
                                            (dispatch [:spotin/request-failed error request])))
-  (rf/dispatch-sync [:spotin/init])
   (reset! !query-client (QueryClient.))
+  (rf/dispatch-sync [:spotin/init])
   (render))
 
 (defn ^:dev/after-load reload! []

@@ -3,7 +3,7 @@
             ["react-query/lib/core/onlineManager" :refer [onlineManager]]
             ["react-query/lib/core/utils" :as utils]
             [intools.spotin.model.spotify :as spotify]
-            [react-query :refer [useMutation useQuery]]
+            [react-query :refer [useMutation]]
             [react]))
 
 (defn- subscribe-noop []
@@ -65,35 +65,47 @@
                       (when (= (.isMutating @!query-client) 1)
                         (.invalidateQueries @!query-client query-key)))})))
 
-(defn use-player []
-  (useQuery "player" #(spotify/request+ (spotify/get-player)) #js {:refetchInterval 5000}))
+(defn player []
+  #js {:queryKey #js ["player"]
+       :queryFn #(spotify/request+ (spotify/get-player))
+       :refetchInterval 5000})
 
-(defn use-playlists []
-  (useQuery "playlists" spotify/get-all-playlists+))
+(defn playlists []
+  #js {:queryKey #js ["playlists"]
+       :queryFn spotify/get-all-playlists+})
 
-(defn use-playlist [playlist-id]
-  (useQuery #js ["playlists" playlist-id] #(spotify/request+ (spotify/get-playlist playlist-id))))
+(defn playlist [playlist-id]
+  #js {:queryKey #js ["playlists" playlist-id]
+       :queryFn #(spotify/request+ (spotify/get-playlist playlist-id))})
 
-(defn use-playlist-tracks [playlist-id]
-  (useQuery #js ["playlist-tracks" playlist-id] #(spotify/get-playlist-tracks+ playlist-id)))
+(defn playlist-tracks [playlist-id]
+  #js {:queryKey #js ["playlist-tracks" playlist-id]
+       :queryFn #(spotify/get-playlist-tracks+ playlist-id)})
 
-(defn use-artist [artist-id]
-  (useQuery #js ["artists" artist-id] #(spotify/request+ (spotify/get-artist artist-id))))
+(defn artist [artist-id]
+  #js {:queryKey #js ["artists" artist-id]
+       :queryFn #(spotify/request+ (spotify/get-artist artist-id))})
 
-(defn use-artist-albums [artist-id]
-  (useQuery #js ["artist-albums" artist-id] #(spotify/get-artist-albums+ artist-id)))
+(defn artist-albums [artist-id]
+  #js {:queryKey #js ["artist-albums" artist-id]
+       :queryFn #(spotify/get-artist-albums+ artist-id)})
 
-(defn use-artist-top-tracks [artist-id]
-  (useQuery #js ["artist-top-tracks" artist-id] #(spotify/request+ (spotify/get-artist-top-tracks artist-id))))
+(defn artist-top-tracks [artist-id]
+  #js {:queryKey #js ["artist-top-tracks" artist-id]
+       :queryFn #(spotify/request+ (spotify/get-artist-top-tracks artist-id))})
 
-(defn use-artist-related-artists [artist-id]
-  (useQuery #js ["artist-related-artists" artist-id] #(spotify/request+ (spotify/get-artist-related-artists artist-id))))
+(defn artist-related-artists [artist-id]
+  #js {:queryKey #js ["artist-related-artists" artist-id]
+       :queryFn #(spotify/request+ (spotify/get-artist-related-artists artist-id))})
 
-(defn use-devices []
-  (useQuery "devices" #(spotify/request+ (spotify/get-player-devices))))
+(defn devices []
+  #js {:queryKey #js ["devices"]
+       :queryFn #(spotify/request+ (spotify/get-player-devices))})
 
-(defn use-albums [album-id]
-  (useQuery #js ["albums" album-id] #(spotify/request+ (spotify/get-album album-id))))
+(defn album [album-id]
+  #js {:queryKey #js ["albums" album-id]
+       :queryFn #(spotify/request+ (spotify/get-album album-id))})
 
-(defn use-album-tracks [album-id]
-  (useQuery #js ["album-tracks" album-id] #(spotify/get-album-tracks+ album-id)))
+(defn album-tracks [album-id]
+  #js {:queryKey #js ["album-tracks" album-id]
+       :queryFn #(spotify/get-album-tracks+ album-id)})
