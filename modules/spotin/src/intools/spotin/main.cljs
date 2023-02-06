@@ -1,21 +1,23 @@
 (ns intools.spotin.main
-  (:require [clojure.string :as str]
-            [goog.object :as gobj]
-            [ink :refer [Box]]
-            [intools.hooks :as hooks]
-            [intools.spotin.actions :refer [player-actions playlist-actions tracks-actions]]
-            [intools.spotin.app.cofx]
-            [intools.spotin.app.events]
-            [intools.spotin.app.fx]
-            [intools.spotin.app.query :as query :refer [!query-client]]
-            [intools.spotin.app.subs]
-            [intools.spotin.components.shortcuts-bar :refer [shortcuts-bar]]
-            [intools.spotin.containers :as containers]
-            [intools.spotin.model.spotify :as spotify]
-            [re-frame.core :as rf :refer [dispatch subscribe]]
-            [react]
-            [react-query :refer [QueryClient QueryClientProvider]]
-            [reagent.core :as r]))
+  (:require
+   [clojure.string :as str]
+   [goog.object :as gobj]
+   [ink :refer [Box]]
+   [intools.hooks :as hooks]
+   [intools.spotin.actions :refer [player-actions playlist-actions tracks-actions]]
+   [intools.spotin.app.cofx]
+   [intools.spotin.app.events]
+   [intools.spotin.app.fx]
+   [intools.spotin.app.mutations :as mutations]
+   [intools.spotin.app.query :as query :refer [!query-client]]
+   [intools.spotin.app.subs]
+   [intools.spotin.components.shortcuts-bar :refer [shortcuts-bar]]
+   [intools.spotin.containers :as containers]
+   [intools.spotin.model.spotify :as spotify]
+   [re-frame.core :as rf :refer [dispatch subscribe]]
+   [react]
+   [react-query :refer [QueryClient QueryClientProvider]]
+   [reagent.core :as r]))
 
 (defonce !app (atom nil))
 (declare render)
@@ -41,10 +43,7 @@
             :name "quit"}]))
 
 (defn use-play-pause-mutate []
-  (let [play-pause-mutation (query/use-optimistic-mutation {:query-key "player"
-                                                            :value-path [:is_playing]
-                                                            :mutate-fn #(spotify/request+ (spotify/player-play-pause %))
-                                                            :update-fn not})]
+  (let [play-pause-mutation (query/use-optimistic-mutation mutations/play-pause)]
     (react/useCallback (fn []
                          (let [playback (.getQueryData @!query-client "player")]
                            (if (spotify/playback-stopped? playback)
@@ -52,14 +51,6 @@
                                  ;; TODO: show device picker if auto-connect fails
                                  (.then #(spotify/request+ (spotify/player-play))))
                              (.mutate play-pause-mutation)))))))
-
-(def volume-path [:device :volume_percent])
-
-(defn volume-up [value]
-  (Math/min 100 (+ value 10)))
-
-(defn volume-down [value]
-  (Math/max 0 (- value 10)))
 
 (defn terminal-title [title]
   (str "\u001B]0;" title "\u0007"))
@@ -105,30 +96,12 @@
         force-focus (not= focused-component-id "error-alert")
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id
                                                                                       :force force-focus})
-        seek-forward-mutation (query/use-optimistic-mutation {:query-key "player"
-                                                              :value-path [:progress_ms]
-                                                              :mutate-fn #(spotify/request+ (spotify/player-seek %))
-                                                              :update-fn #(+ % 10000)})
-        seek-backward-mutation (query/use-optimistic-mutation {:query-key "player"
-                                                               :value-path [:progress_ms]
-                                                               :mutate-fn #(spotify/request+ (spotify/player-seek %))
-                                                               :update-fn #(-> % (- 10000) (Math/max 0))})
-        volume-up-mutation (query/use-optimistic-mutation {:query-key "player"
-                                                           :value-path volume-path
-                                                           :mutate-fn #(spotify/request+ (spotify/player-volume %))
-                                                           :update-fn volume-up})
-        volume-down-mutation (query/use-optimistic-mutation {:query-key "player"
-                                                             :value-path volume-path
-                                                             :mutate-fn #(spotify/request+ (spotify/player-volume %))
-                                                             :update-fn volume-down})
-        shuffle-mutation (query/use-optimistic-mutation {:query-key "player"
-                                                         :value-path [:shuffle_state]
-                                                         :mutate-fn #(spotify/request+ (spotify/player-shuffle %))
-                                                         :update-fn not})
-        repeat-mutation (query/use-optimistic-mutation {:query-key "player"
-                                                        :value-path [:repeat_state]
-                                                        :mutate-fn #(spotify/request+ (spotify/player-repeat %))
-                                                        :update-fn spotify/repeat-state-transition})
+        seek-forward-mutation (query/use-optimistic-mutation mutations/seek-forward)
+        seek-backward-mutation (query/use-optimistic-mutation mutations/seek-backward)
+        volume-up-mutation (query/use-optimistic-mutation mutations/volume-up)
+        volume-down-mutation (query/use-optimistic-mutation mutations/volume-down)
+        shuffle-mutation (query/use-optimistic-mutation mutations/toggle-shuffle)
+        repeat-mutation (query/use-optimistic-mutation mutations/toggle-repeat)
         play-pause-mutate (use-play-pause-mutate)
         dispatch-action (fn [{:keys [id event arg] :as action}]
                           (if event
