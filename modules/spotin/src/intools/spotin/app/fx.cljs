@@ -115,3 +115,15 @@
 
 (reg-fx :spotin/player-toggle-repeat
   (query/make-optimistic-mutation-fx mutations/toggle-repeat))
+
+(reg-fx :spotin/play-pause
+  (let [mutate (query/make-optimistic-mutation-fx mutations/play-pause)]
+    (fn [_]
+      (let [playback (.getQueryData @!query-client "player")]
+        ;; If playback is in stopped state then paly/pause does nothing.
+        ;; Therefore we try to select available device and triger play directly.
+        (if (spotify/playback-stopped? playback)
+          (-> (spotify/auto-select-device+)
+              ;; TODO: show device picker if auto-connect fails
+              (.then #(spotify/request+ (spotify/player-play))))
+          (mutate))))))

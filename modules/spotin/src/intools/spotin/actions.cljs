@@ -6,7 +6,8 @@
 (def player-actions
   [{:id :play-pause
     :name "play/pause"
-    :shortcut "z"}
+    :shortcut "z"
+    :event [:spotin/dispatch-fx :spotin/play-pause]}
    {:id :next
     :name "next"
     :shortcut "n"

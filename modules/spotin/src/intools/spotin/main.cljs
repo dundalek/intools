@@ -8,7 +8,6 @@
    [intools.spotin.app.cofx]
    [intools.spotin.app.events]
    [intools.spotin.app.fx]
-   [intools.spotin.app.mutations :as mutations]
    [intools.spotin.app.query :as query :refer [!query-client]]
    [intools.spotin.app.subs]
    [intools.spotin.containers :as containers]
@@ -23,16 +22,6 @@
 (declare render)
 
 (def sidepanel-width "22%")
-
-(defn use-play-pause-mutate []
-  (let [play-pause-mutation (query/use-optimistic-mutation mutations/play-pause)]
-    (react/useCallback (fn []
-                         (let [playback (.getQueryData @!query-client "player")]
-                           (if (spotify/playback-stopped? playback)
-                             (-> (spotify/auto-select-device+)
-                                 ;; TODO: show device picker if auto-connect fails
-                                 (.then #(spotify/request+ (spotify/player-play))))
-                             (.mutate play-pause-mutation)))))))
 
 (defn app-title []
   (let [{:keys [item]} (:data @(subscribe [:spotin/player]))
@@ -67,13 +56,10 @@
         force-focus (not= focused-component-id "error-alert")
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id
                                                                                       :force force-focus})
-        play-pause-mutate (use-play-pause-mutate)
-        dispatch-action (fn [{:keys [id event arg] :as action}]
+        dispatch-action (fn [{:keys [event arg] :as action}]
                           (if event
                             (dispatch (conj event arg))
-                            (case id
-                              :play-pause (play-pause-mutate)
-                              (dispatch [:run-action action]))))]
+                            (dispatch [:run-action action])))]
 
     (ink/useInput
      (fn [input key]
