@@ -67,12 +67,6 @@
         force-focus (not= focused-component-id "error-alert")
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id
                                                                                       :force force-focus})
-        seek-forward-mutation (query/use-optimistic-mutation mutations/seek-forward)
-        seek-backward-mutation (query/use-optimistic-mutation mutations/seek-backward)
-        volume-up-mutation (query/use-optimistic-mutation mutations/volume-up)
-        volume-down-mutation (query/use-optimistic-mutation mutations/volume-down)
-        shuffle-mutation (query/use-optimistic-mutation mutations/toggle-shuffle)
-        repeat-mutation (query/use-optimistic-mutation mutations/toggle-repeat)
         play-pause-mutate (use-play-pause-mutate)
         dispatch-action (fn [{:keys [id event arg] :as action}]
                           (if event
@@ -84,12 +78,6 @@
                                                             {:title "Delete playlist"
                                                              :description (str "Are you sure you want to delete playlist '" (:name arg) "'?")
                                                              :on-submit #(dispatch [:playlist-unfollow (:id arg)])}])
-                              :spotin/player-seek-forward (.mutate seek-forward-mutation)
-                              :spotin/player-seek-backward (.mutate seek-backward-mutation)
-                              :spotin/player-volume-up (.mutate volume-up-mutation)
-                              :spotin/player-volume-down (.mutate volume-down-mutation)
-                              :shuffle (.mutate shuffle-mutation)
-                              :repeat (.mutate repeat-mutation)
                               :play-pause (play-pause-mutate)
                               (dispatch [:run-action action]))))]
 

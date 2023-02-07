@@ -1,8 +1,10 @@
 (ns intools.spotin.app.fx
-  (:require [intools.spotin.app.query :refer [!query-client]]
-            [intools.spotin.model.playlist :as playlist]
-            [intools.spotin.model.spotify :as spotify]
-            [re-frame.core :refer [dispatch reg-fx]]))
+  (:require
+   [intools.spotin.app.mutations :as mutations]
+   [intools.spotin.app.query :as query :refer [!query-client]]
+   [intools.spotin.model.playlist :as playlist]
+   [intools.spotin.model.spotify :as spotify]
+   [re-frame.core :refer [dispatch reg-fx]]))
 
 (defn fetch-error? [err]
   (= (-> err .-constructor .-name) "Response"))
@@ -95,3 +97,21 @@
 (reg-fx :spotin/invalidate-query
   (fn [query-key]
     (.invalidateQueries @!query-client query-key)))
+
+(reg-fx :spotin/player-seek-forward
+  (query/make-optimistic-mutation-fx mutations/seek-forward))
+
+(reg-fx :spotin/player-seek-backward
+  (query/make-optimistic-mutation-fx mutations/seek-backward))
+
+(reg-fx :spotin/player-volume-up
+  (query/make-optimistic-mutation-fx mutations/volume-up))
+
+(reg-fx :spotin/player-volume-down
+  (query/make-optimistic-mutation-fx mutations/volume-down))
+
+(reg-fx :spotin/player-toggle-shuffle
+  (query/make-optimistic-mutation-fx mutations/toggle-shuffle))
+
+(reg-fx :spotin/player-toggle-repeat
+  (query/make-optimistic-mutation-fx mutations/toggle-repeat))

@@ -17,26 +17,32 @@
     :event [:spotin/player-previous]}
    {:id :shuffle
     :name "shuffle"
-    :shortcut "s"}
+    :shortcut "s"
+    :event [:spotin/dispatch-fx :spotin/player-toggle-shuffle]}
    {:id :repeat
     :name "repeat"
-    :shortcut "p"}
+    :shortcut "p"
+    :event [:spotin/dispatch-fx :spotin/player-toggle-repeat]}
    {:id :spotin/open-currently-playing
     :name "currently playing"
     :shortcut "."
     :event [:spotin/open-currently-playing]}
    {:id :spotin/player-volume-up
     :name "volume up 10%"
-    :shortcut "+"}
+    :shortcut "+"
+    :event [:spotin/dispatch-fx :spotin/player-volume-up]}
    {:id :spotin/player-volume-down
     :name "volume down 10%"
-    :shortcut "-"}
+    :shortcut "-"
+    :event [:spotin/dispatch-fx :spotin/player-volume-down]}
    {:id :spotin/player-seek-forward
     :name "seek forward 10s"
-    :shortcut ">"}
+    :shortcut ">"
+    :event [:spotin/dispatch-fx :spotin/player-seek-forward]}
    {:id :spotin/player-seek-backward
     :name "seek back 10s"
-    :shortcut "<"}
+    :shortcut "<"
+    :event [:spotin/dispatch-fx :spotin/player-seek-backward]}
    {:id :spotin/devices
     :name "devices"
     :shortcut "e"

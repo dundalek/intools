@@ -3,7 +3,7 @@
             ["react-query/lib/core/onlineManager" :refer [onlineManager]]
             ["react-query/lib/core/utils" :as utils]
             [intools.spotin.model.spotify :as spotify]
-            [react-query :refer [useMutation]]
+            [react-query :as rq :refer [useMutation]]
             [react]))
 
 (defn- subscribe-noop []
@@ -19,22 +19,28 @@
 
     (atom nil)))
 
-(defn use-optimistic-mutation [{:keys [query-key value-path mutate-fn update-fn]}]
-  (let [mutation (useMutation
-                  mutate-fn
-                  #js{:onMutate (fn [new-progress]
-                                  (let [current (.getQueryData @!query-client query-key)
-                                        optimistic (assoc-in current value-path new-progress)]
-                                    (.cancelQueries @!query-client query-key)
-                                    (.setQueryData @!query-client query-key optimistic)))
-                      :onSettled (fn []
-                                    ;; Count 1 means to only invalidate if we are the last mutation
-                                   (when (= (.isMutating @!query-client) 1)
-                                     (js/setTimeout (fn []
-                                                      (when (= (.isMutating @!query-client) 0)
-                                                        (.cancelQueries @!query-client query-key)
-                                                        (.invalidateQueries @!query-client query-key)))
-                                                    spotify/player-update-delay)))})
+(defn make-optimistic-mutation-options [{:keys [query-key value-path mutate-fn]}]
+   #js {:mutationFn mutate-fn
+        :onMutate (fn [new-progress]
+                    (let [current (.getQueryData @!query-client query-key)
+                          optimistic (assoc-in current value-path new-progress)]
+                      (.cancelQueries @!query-client query-key)
+                      (.setQueryData @!query-client query-key optimistic)))
+        :onSettled (fn []
+                      ;; Count 1 means to only invalidate if we are the last mutation
+
+                     ;; this could end up wrong if mutations for different keys are triggered at the same time
+                     ;; isMutating takes a predicate function
+                     ;; could set meta on the mutation
+                     (when (= (.isMutating @!query-client) 1)
+                       (js/setTimeout (fn []
+                                        (when (= (.isMutating @!query-client) 0)
+                                          (.cancelQueries @!query-client query-key)
+                                          (.invalidateQueries @!query-client query-key)))
+                                      spotify/player-update-delay)))})
+
+(defn use-optimistic-mutation [{:keys [query-key value-path update-fn _mutate-fn] :as options}]
+  (let [mutation (useMutation (make-optimistic-mutation-options options))
         mutate (.-mutate mutation)
         mutate-update (react/useCallback
                        (fn []
@@ -44,6 +50,19 @@
                        #js [mutate])]
     (set! (.-mutate mutation) mutate-update)
     mutation))
+
+(defn make-optimistic-mutation-fx [{:keys [query-key value-path update-fn _mutate-fn] :as options}]
+  ;; based on onMutate
+  ;; ignoring result (which is observed and returned when using the hook, but we just rely on global indicators)
+  ;; create observer lazily so that query-client is initialized at that point
+  (let [!observer (delay (rq/MutationObserver. @!query-client
+                                               (make-optimistic-mutation-options options)))]
+    (fn mutate []
+      (let [current (-> (.getQueryData @!query-client query-key)
+                        (get-in value-path))
+            variables (update-fn current)]
+        (-> (.mutate @!observer variables)
+            (.catch (fn [_])))))))
 
 (defn use-optimistic-playlist-mutation [{:keys [playlist-id attr]}]
   (let [query-key "playlists"]
