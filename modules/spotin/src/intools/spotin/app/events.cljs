@@ -25,10 +25,6 @@
   (fn [db]
     (assoc db :error nil)))
 
-(reg-event-db :spotin/router-navigate
-  (fn [db [_ route]]
-    (app/router-navigate db route)))
-
 (reg-event-db :spotin/router-back
   (fn [db _]
     (app/router-back db)))
@@ -116,23 +112,19 @@
            :actions nil
            :actions-search-query nil)))
 
-(reg-event-db :open-input-panel
-  (fn [db [_ data]]
-    (assoc db :active-input-panel data)))
-
 (reg-event-db :close-input-panel
   (fn [db _]
-    (assoc db :active-input-panel nil)))
+    (app/close-input-panel db)))
 
 (reg-event-db :playlist-rename
   (fn [db [_ arg]]
-    (assoc db :active-input-panel {:type :playlist-rename
-                                   :arg arg})))
+    (app/open-input-panel db {:type :playlist-rename
+                              :arg arg})))
 
 (reg-event-db :playlist-edit-description
   (fn [db [_ arg]]
-    (assoc db :active-input-panel {:type :playlist-edit-description
-                                   :arg arg})))
+    (app/open-input-panel db {:type :playlist-edit-description
+                              :arg arg})))
 
 (reg-event-fx :playlist-unfollow
   (fn [_ [_ playlist-id]]
@@ -142,6 +134,7 @@
   (fn [_ [_ {:keys [id arg]}]]
     {id arg}))
 
+;; Just for prototyping, introduce dedicated events later
 (reg-event-fx :spotin/dispatch-fx
   (fn [_ [_ id arg]]
     {id arg}))

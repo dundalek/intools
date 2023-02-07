@@ -11,3 +11,9 @@
 (defn router-back [db]
   (cond-> db
     (seq (:routes db)) (update :routes pop)))
+
+(defn open-input-panel [db panel]
+  (assoc db :active-input-panel panel))
+
+(defn close-input-panel [db]
+  (assoc db :active-input-panel nil))
