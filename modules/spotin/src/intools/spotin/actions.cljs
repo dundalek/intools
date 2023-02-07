@@ -51,7 +51,8 @@
 
 (def playlist-actions
   [{:id :playlist-play
-    :name "play"}
+    :name "play"
+    :event [:spotin/dispatch-fx :playlist-play]}
    {:id :playlist-rename
     :name "rename"
     :event [:playlist-rename]}
@@ -82,7 +83,8 @@
     :event [:spotin/open-random-playlist]}
    {:id :spotin/refresh-playlists
     :name "refresh"
-    :shortcut "r"}
+    :shortcut "r"
+    :event [:spotin/refresh-playlists]}
    {:id :spotin/start-playlist-search
     :name "search"
     :shortcut "/"

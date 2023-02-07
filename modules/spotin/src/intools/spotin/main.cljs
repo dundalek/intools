@@ -56,10 +56,9 @@
         force-focus (not= focused-component-id "error-alert")
         {:keys [active-focus-id focus-next focus-previous]} (hooks/use-focus-manager {:focus-id focused-component-id
                                                                                       :force force-focus})
-        dispatch-action (fn [{:keys [event arg] :as action}]
-                          (if event
-                            (dispatch (conj event arg))
-                            (dispatch [:run-action action])))]
+        dispatch-action (fn [{:keys [event arg] :as _action}]
+                          (assert (vector? event))
+                          (dispatch (conj event arg)))]
 
     (ink/useInput
      (fn [input key]

@@ -130,18 +130,14 @@
 (reg-event-db :spotin/playlist-unfollow-selected
   (fn [db [_ arg]]
     (app/open-confirmation-modal
-      db
-      {:title "Delete playlist"
-       :description (str "Are you sure you want to delete playlist '" (:name arg) "'?")
-       :on-submit #(dispatch [:spotin/playlist-unfollow-confirmed (:id arg)])})))
+     db
+     {:title "Delete playlist"
+      :description (str "Are you sure you want to delete playlist '" (:name arg) "'?")
+      :on-submit #(dispatch [:spotin/playlist-unfollow-confirmed (:id arg)])})))
 
 (reg-event-fx :spotin/playlist-unfollow-confirmed
   (fn [_ [_ playlist-id]]
     {:playlist-unfollow playlist-id}))
-
-(reg-event-fx :run-action
-  (fn [_ [_ {:keys [id arg]}]]
-    {id arg}))
 
 ;; Just for prototyping, introduce dedicated events later
 (reg-event-fx :spotin/dispatch-fx
