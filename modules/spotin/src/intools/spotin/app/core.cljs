@@ -17,3 +17,9 @@
 
 (defn close-input-panel [db]
   (assoc db :active-input-panel nil))
+
+(defn open-confirmation-modal [db opts]
+  (assoc db :confirmation-modal opts))
+
+(defn close-confirmation-modal [db]
+  (assoc db :confirmation-modal nil))

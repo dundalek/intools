@@ -72,12 +72,6 @@
                           (if event
                             (dispatch (conj event arg))
                             (case id
-                              :playlist-rename (dispatch [:playlist-rename arg])
-                              :playlist-edit-description (dispatch [:playlist-edit-description arg])
-                              :playlist-unfollow (dispatch [:spotin/open-confirmation-modal
-                                                            {:title "Delete playlist"
-                                                             :description (str "Are you sure you want to delete playlist '" (:name arg) "'?")
-                                                             :on-submit #(dispatch [:playlist-unfollow (:id arg)])}])
                               :play-pause (play-pause-mutate)
                               (dispatch [:run-action action]))))]
 

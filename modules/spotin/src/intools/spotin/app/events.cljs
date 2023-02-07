@@ -1,8 +1,9 @@
 (ns intools.spotin.app.events
-  (:require [intools.spotin.app.core :as app]
-            [intools.spotin.app.db :as db]
-            [intools.spotin.model.spotify :as spotify]
-            [re-frame.core :refer [inject-cofx reg-event-db reg-event-fx]]))
+  (:require
+   [intools.spotin.app.core :as app]
+   [intools.spotin.app.db :as db]
+   [intools.spotin.model.spotify :as spotify]
+   [re-frame.core :refer [dispatch inject-cofx reg-event-db reg-event-fx]]))
 
 (reg-event-fx :spotin/init
   (fn [_ _]
@@ -126,7 +127,15 @@
     (app/open-input-panel db {:type :playlist-edit-description
                               :arg arg})))
 
-(reg-event-fx :playlist-unfollow
+(reg-event-db :spotin/playlist-unfollow-selected
+  (fn [db [_ arg]]
+    (app/open-confirmation-modal
+      db
+      {:title "Delete playlist"
+       :description (str "Are you sure you want to delete playlist '" (:name arg) "'?")
+       :on-submit #(dispatch [:spotin/playlist-unfollow-confirmed (:id arg)])})))
+
+(reg-event-fx :spotin/playlist-unfollow-confirmed
   (fn [_ [_ playlist-id]]
     {:playlist-unfollow playlist-id}))
 
@@ -170,11 +179,11 @@
 
 (reg-event-db :spotin/open-confirmation-modal
   (fn [db [_ opts]]
-    (assoc db :confirmation-modal opts)))
+    (app/open-confirmation-modal db opts)))
 
 (reg-event-db :spotin/close-confirmation-modal
-  (fn [db]
-    (assoc db :confirmation-modal nil)))
+  (fn [db _]
+    (app/close-confirmation-modal db)))
 
 (reg-event-db :spotin/open-devices-menu
   (fn [db]

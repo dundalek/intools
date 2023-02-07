@@ -52,11 +52,14 @@
   [{:id :playlist-play
     :name "play"}
    {:id :playlist-rename
-    :name "rename"}
+    :name "rename"
+    :event [:playlist-rename]}
    {:id :playlist-edit-description
-    :name "edit description"}
+    :name "edit description"
+    :event [:playlist-edit-description]}
    {:id :playlist-unfollow
-    :name "delete"}
+    :name "delete"
+    :event [:spotin/playlist-unfollow-selected]}
    ;; or private
    ;;{:id :playlist-make-public
    ;; :name "TBD make public"}

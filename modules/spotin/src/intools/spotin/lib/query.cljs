@@ -16,7 +16,6 @@
   (let [query-client @!query-client
         defaulted-options (.defaultQueryObserverOptions query-client options)
         _ (set! (.-optimisticResults defaulted-options) true)
-        _ (println "defaulted-options" defaulted-options)
         observer (rq/QueryObserver. query-client defaulted-options)
         get-result #(.getOptimisticResult observer defaulted-options)
         !result (r/atom (get-result))
