@@ -19,7 +19,6 @@
    [reagent.core :as r]))
 
 (defonce !app (atom nil))
-(declare render)
 
 (def sidepanel-width "22%")
 
@@ -62,6 +61,7 @@
 
     (ink/useInput
      (fn [input key]
+       ;; only handle globally when no input is focused, this is a bit hacky since ink's focus system is a bit limited
        (when-not (or (= active-focus-id "input-bar")
                      (and (= active-focus-id "action-menu") actions-search-query)
                      (and (= active-focus-id "playlists-panel") playlist-search-query)

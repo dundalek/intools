@@ -3,6 +3,8 @@
   (:require [abort-controller :refer [AbortController]]
             [clojure.core :as clojure]
             [clojure.string :as str]
+            ;; can't upgrade node-fetch from 2.x, since 3.x is ESM only which shadow-cljs does not like
+            ;; native fetch should be available in node 18+
             [node-fetch :as fetch]
             [sieppari.core :as sieppari])
   (:import (goog.Uri QueryData)))
