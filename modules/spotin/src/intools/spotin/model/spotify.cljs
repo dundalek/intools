@@ -24,7 +24,7 @@
    "user-read-currently-playing"
    "user-library-read"])
 
-(defonce ^:dynamic *access-token* nil)
+(defonce !access-token (atom nil))
 (defonce ^:dynamic *before-request-callback* nil)
 (defonce ^:dynamic *after-request-callback* nil)
 (defonce ^:dynamic *request-error-callback* nil)
@@ -116,7 +116,7 @@
             ctx)})
 
 (defn add-authorization-header [opts]
-  (update opts :headers assoc :Authorization (str "Bearer " *access-token*)))
+  (update opts :headers assoc :Authorization (str "Bearer " @!access-token)))
 
 (def authorize-interceptor
   {:enter (fn [ctx]
@@ -174,21 +174,16 @@
                  (js/console.log body)
                  body)))))
 
-(defn refresh-token+ [rtoken]
-  (let [auth-options {:method "POST"
-                      :url "https://accounts.spotify.com/api/token"
-                      :headers {:Authorization (str "Basic "
-                                                    (-> (js/Buffer.from (str client-id ":" client-secret))
-                                                        (.toString "base64")))}
-                      :content-type :form
-                      :accept :json
-                      :body {:grant_type "refresh_token"
-                             :refresh_token rtoken}}]
-    (-> (basic-request+ auth-options)
-        (.then (fn [^js body]
-                 (let [token (.-access_token body)]
-                   (set! *access-token* token)
-                   token))))))
+(defn refresh-token-request [{:keys [client-id client-secret refresh-token]}]
+  {:method "POST"
+   :url "https://accounts.spotify.com/api/token"
+   :headers {:Authorization (str "Basic "
+                                 (-> (js/Buffer.from (str client-id ":" client-secret))
+                                     (.toString "base64")))}
+   :content-type :form
+   :accept :json
+   :body {:grant_type "refresh_token"
+          :refresh_token refresh-token}})
 
 (defn re-execute-context [{:keys [queue] :as ctx}]
   (let [ctx (dissoc ctx :stack :queue)]
@@ -196,20 +191,31 @@
      (fn [resolve reject]
        (sieppari/execute-context queue ctx resolve reject)))))
 
-(def refresh-interceptor
-  {:enter (fn [ctx]
-            (let [ctx (assoc ctx ::refresh-ctx ctx)]
-              (if *access-token*
+(defn make-refresh-interceptor [{:keys [!access-token client-opts]}]
+  (let [refresh-token+ (fn []
+                         (-> (basic-request+ (refresh-token-request client-opts))
+                             (.then (fn [^js body]
+                                      (let [token (.-access_token body)]
+                                        (reset! !access-token token))))))]
+    {:enter (fn [ctx]
+              (let [ctx (assoc ctx ::refresh-ctx ctx)]
+                (if @!access-token
+                  ctx
+                  (-> (refresh-token+)
+                      (.then (fn [] ctx))))))
+     :error (fn [{:keys [error stack] :as ctx}]
+              (if-not (expired-token? error)
                 ctx
-                (-> (refresh-token+ refresh-token)
-                    (.then (fn [] ctx))))))
-   :error (fn [{:keys [error stack] :as ctx}]
-            (if-not (expired-token? error)
-              ctx
-              ;; Naive implementation: we might get multiple refreshes for concurrent requests.
-              (-> (refresh-token+ refresh-token)
-                  (.then #(re-execute-context (::refresh-ctx ctx)))
-                  (.then #(assoc % :stack stack)))))})
+                ;; Naive implementation: we might get multiple refreshes for concurrent requests.
+                (-> (refresh-token+)
+                    (.then #(re-execute-context (::refresh-ctx ctx)))
+                    (.then #(assoc % :stack stack)))))}))
+
+(def refresh-interceptor (make-refresh-interceptor
+                          {:!access-token !access-token
+                           :client-opts {:client-id client-id
+                                         :client-secret client-secret
+                                         :refresh-token refresh-token}}))
 
 (def request-interceptors
   [callbacks-interceptor
