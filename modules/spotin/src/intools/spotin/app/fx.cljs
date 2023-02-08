@@ -1,7 +1,8 @@
 (ns intools.spotin.app.fx
   (:require
    [intools.spotin.app.mutations :as mutations]
-   [intools.spotin.app.query :as query :refer [!query-client]]
+   [intools.spotin.app.query :as query]
+   [intools.spotin.infrastructure.query-client :as query-client]
    [intools.spotin.infrastructure.spotify-client :as spotify-client]
    [intools.spotin.model.playlist :as playlist]
    [intools.spotin.model.spotify :as spotify]
@@ -15,7 +16,7 @@
        (= (.-status err) 404)))
 
 (defn with-auto-select-device+ [make-request]
-  (-> (let [playback (.getQueryData @!query-client "player")]
+  (-> (let [playback (.getQueryData (query-client/the-client) "player")]
         (if (spotify/playback-stopped? playback)
           (spotify/auto-select-device+ spotify-client/client)
           ;; TODO: show device picker if auto-connect fails
@@ -33,7 +34,7 @@
 (defn with-playback-refresh+ [make-request]
   (-> (with-auto-select-device+ make-request)
       (.finally (fn []
-                  (js/setTimeout #(.invalidateQueries @!query-client "player")
+                  (js/setTimeout #(.invalidateQueries (query-client/the-client) "player")
                                  spotify/player-update-delay)))))
 
 (reg-fx :next
@@ -97,7 +98,7 @@
 
 (reg-fx :spotin/invalidate-query
   (fn [query-key]
-    (.invalidateQueries @!query-client query-key)))
+    (.invalidateQueries (query-client/the-client) query-key)))
 
 (reg-fx :spotin/player-seek-forward
   (query/make-optimistic-mutation-fx mutations/seek-forward))
@@ -120,7 +121,7 @@
 (reg-fx :spotin/play-pause
   (let [mutate (query/make-optimistic-mutation-fx mutations/play-pause)]
     (fn [_]
-      (let [playback (.getQueryData @!query-client "player")]
+      (let [playback (.getQueryData (query-client/the-client) "player")]
         ;; If playback is in stopped state then paly/pause does nothing.
         ;; Therefore we try to select available device and triger play directly.
         (if (spotify/playback-stopped? playback)

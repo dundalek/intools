@@ -2,7 +2,7 @@
   (:require
    ["react-query" :as rq]
    [cljs-bean.core :as bean]
-   [intools.spotin.app.query :refer [!query-client]]
+   [intools.spotin.infrastructure.query-client :as query-client]
    [re-frame.core :as rf]
    [reagent.core :as r]
    [reagent.ratom :as ra]))
@@ -13,7 +13,7 @@
   ;; no suspense
   ;; changing options will likely result in a new instance instead of updating existing one
   ;; no notifyOnChangeProps tracked support
-  (let [query-client @!query-client
+  (let [query-client (query-client/the-client)
         defaulted-options (.defaultQueryObserverOptions query-client options)
         _ (set! (.-optimisticResults defaulted-options) true)
         observer (rq/QueryObserver. query-client defaulted-options)

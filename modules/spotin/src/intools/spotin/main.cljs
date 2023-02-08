@@ -8,14 +8,14 @@
    [intools.spotin.app.cofx]
    [intools.spotin.app.events]
    [intools.spotin.app.fx]
-   [intools.spotin.app.query :as query :refer [!query-client]]
    [intools.spotin.app.subs]
    [intools.spotin.containers :as containers]
+   [intools.spotin.infrastructure.query-client :as query-client]
    [intools.spotin.lib.terminal-title :as terminal-title]
    [intools.spotin.model.spotify :as spotify]
    [re-frame.core :as rf :refer [dispatch subscribe]]
    [react]
-   [react-query :refer [QueryClient QueryClientProvider]]
+   [react-query :refer [QueryClientProvider]]
    [reagent.core :as r]))
 
 (defonce !app (atom nil))
@@ -120,7 +120,7 @@
      [containers/shortcuts-bar]]))
 
 (defn app-wrapper []
-  [:> QueryClientProvider {:client @!query-client}
+  [:> QueryClientProvider {:client (query-client/the-client)}
    [:f> app]])
 
 (defn render []
@@ -139,7 +139,6 @@
   (set! spotify/*after-request-callback* #(dispatch [:spotin/request-finished]))
   (set! spotify/*request-error-callback* (fn [error request]
                                            (dispatch [:spotin/request-failed error request])))
-  (reset! !query-client (QueryClient.))
   (rf/dispatch-sync [:spotin/init])
   (render))
 
