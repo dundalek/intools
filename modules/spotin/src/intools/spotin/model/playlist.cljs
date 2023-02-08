@@ -1,6 +1,5 @@
 (ns intools.spotin.model.playlist
   (:require
-   [intools.spotin.infrastructure.spotify-client :as spotify-client]
    [intools.spotin.model.spotify :as spotify]))
 
 (defn interleave-all
@@ -19,22 +18,22 @@
        (take 50)
        (shuffle)))
 
-(defn create-mixed-playlist+ [playlist-ids]
-  (-> (map spotify/get-playlist-tracks+ playlist-ids)
+(defn create-mixed-playlist+ [{:keys [request+] :as client} playlist-ids]
+  (-> (map #(spotify/get-playlist-tracks+ client %) playlist-ids)
       (js/Promise.all)
       (.then (fn [bodies]
                (let [track-uris (->> bodies
                                      (map :items)
                                      (generate-mixed-playlist)
                                      (map #(get-in % [:track :uri])))]
-                 (-> (spotify-client/request+ (spotify/current-user))
+                 (-> (request+ (spotify/current-user))
                      (.then (fn [user]
                               ;; TODO: add description - will need to fetch playlists for their name
                               ;;:description (str "Generated from: " (str/join ", " (map :name playlists)))})
                               (let [user-id (:id user)
                                     playlist-name (str "Generated-" (+ 100 (rand-int 900)))]
-                                (spotify-client/request+ (spotify/create-playlist user-id {:name playlist-name})))))
+                                (request+ (spotify/create-playlist user-id {:name playlist-name})))))
                      (.then (fn [body]
                               (let [playlist-id (:id body)]
-                                (spotify-client/request+ (spotify/post (str "https://api.spotify.com/v1/playlists/" playlist-id "/tracks")
-                                                                       {:body {:uris track-uris}})))))))))))
+                                (request+ (spotify/post (str "https://api.spotify.com/v1/playlists/" playlist-id "/tracks")
+                                                        {:body {:uris track-uris}})))))))))))

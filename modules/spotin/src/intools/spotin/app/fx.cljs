@@ -86,7 +86,7 @@
 
 (reg-fx :playlists-mix
   (fn [playlist-ids]
-    (-> (playlist/create-mixed-playlist+ playlist-ids)
+    (-> (playlist/create-mixed-playlist+ spotify-client/client playlist-ids)
         ;; TODO: maybe only refresh the single playlist
         (.then #(dispatch [:spotin/refresh-playlists])))))
 
