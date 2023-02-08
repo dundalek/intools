@@ -5,9 +5,13 @@
             [clojure.string :as str]
             ;; can't upgrade node-fetch from 2.x, since 3.x is ESM only which shadow-cljs does not like
             ;; native fetch should be available in node 18+
-            [node-fetch :as fetch]
+            ; [node-fetch :as fetch]
             [sieppari.core :as sieppari])
   (:import (goog.Uri QueryData)))
+
+(def fetch
+  #_fetch/default
+  js/fetch)
 
 (def client-id (.. js/process -env -SPOTIFY_CLIENT_ID))
 (def client-secret (.. js/process -env -SPOTIFY_CLIENT_SECRET))
