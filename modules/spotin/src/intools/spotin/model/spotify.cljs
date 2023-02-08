@@ -1,17 +1,9 @@
 (ns intools.spotin.model.spotify
   (:refer-clojure :exclude [get])
   (:require [abort-controller :refer [AbortController]]
-            [clojure.core :as clojure]
             [clojure.string :as str]
-            ;; can't upgrade node-fetch from 2.x, since 3.x is ESM only which shadow-cljs does not like
-            ;; native fetch should be available in node 18+
-            ; [node-fetch :as fetch]
-            [sieppari.core :as sieppari])
-  (:import (goog.Uri QueryData)))
-
-(def fetch
-  #_fetch/default
-  js/fetch)
+            [sieppari.core :as sieppari]
+            [intools.spotin.infrastructure.fetch :as fetch]))
 
 (def client-id (.. js/process -env -SPOTIFY_CLIENT_ID))
 (def client-secret (.. js/process -env -SPOTIFY_CLIENT_SECRET))
@@ -48,44 +40,6 @@
        "&redirect_uri=" (js/encodeURIComponent redirect-uri)
        "&client_id=" (js/encodeURIComponent client-id)))
 
-(def content-types
-  {:form "application/x-www-form-urlencoded"
-   :json "application/json"})
-
-(defn encode-form-params [form-params]
-  (reduce (fn [params [k v]]
-            (.append params (name k) v)
-            params)
-          (js/URLSearchParams.)
-          form-params))
-
-(defn encode-query-params [query-params]
-  (let [qd (QueryData.)]
-    (doseq [[k v] query-params]
-      (.set qd (name k) v))
-    (.toString qd)))
-
-(defn request->url [{:keys [url query-params]}]
-  (if (seq query-params)
-    (str url "?" (encode-query-params query-params))
-    url))
-
-(defn request->fetch-options [{:keys [method url headers query-params body content-type accept signal]}]
-  (cond-> {:method (str/upper-case (name method))
-           :headers headers}
-
-    (and (= content-type :json) (map? body))
-    (-> (assoc :body (js/JSON.stringify (clj->js body)))
-        (update :headers assoc :Content-Type (clojure/get content-types content-type)))
-
-    (and (= content-type :form) (map? body))
-    (-> (assoc :body (encode-form-params body))
-        (update :headers assoc :Content-Type (clojure/get content-types content-type)))
-
-    accept (update :headers assoc :Accept (clojure/get content-types accept))
-    signal (assoc :signal signal)
-    :always clj->js))
-
 (defn parse-json-response [response]
   (if (.-ok response)
     (if (not= (.-status response) 204)
@@ -119,18 +73,16 @@
               (*after-request-callback* request))
             ctx)})
 
-(defn add-authorization-header [opts]
-  (update opts :headers assoc :Authorization (str "Bearer " @!access-token)))
-
-(def authorize-interceptor
+(defn make-authorize-interceptor [{:keys [get-access-token]}]
   {:enter (fn [ctx]
-            (update ctx :request add-authorization-header))})
+            (assoc-in ctx [:request :headers :Authorization]
+                      (str "Bearer " (get-access-token))))})
 
 (def js->clj-response-interceptor
   {:leave (fn [ctx]
             (update ctx :response js->clj :keywordize-keys true))})
 
-(def timer-key ::timer-id)
+(def ^:private timer-key ::timer-id)
 
 (defn make-timeout-signal-interceptor [timeout-ms]
   {:enter (fn [ctx]
@@ -148,14 +100,10 @@
 (defn expired-token? [^js e]
   (= (.-status e) 401))
 
-(defn request->fetch+ [request]
-  (fetch (request->url request)
-         (request->fetch-options request)))
-
 (def basic-request-interceptors
   [parse-json-response-interceptor
    (make-timeout-signal-interceptor 10000)
-   request->fetch+])
+   fetch/request->fetch+])
 
 (defn basic-request+ [opts]
   (js/Promise.
@@ -215,20 +163,17 @@
                     (.then #(re-execute-context (::refresh-ctx ctx)))
                     (.then #(assoc % :stack stack)))))}))
 
-(def refresh-interceptor (make-refresh-interceptor
-                          {:!access-token !access-token
-                           :client-opts {:client-id client-id
-                                         :client-secret client-secret
-                                         :refresh-token refresh-token}}))
-
 (def request-interceptors
   [callbacks-interceptor
-   refresh-interceptor
+   (make-refresh-interceptor {:!access-token !access-token
+                              :client-opts {:client-id client-id
+                                            :client-secret client-secret
+                                            :refresh-token refresh-token}})
    js->clj-response-interceptor
    parse-json-response-interceptor
-   authorize-interceptor
+   (make-authorize-interceptor {:get-access-token (fn [] @!access-token)})
    (make-timeout-signal-interceptor 10000)
-   request->fetch+])
+   fetch/request->fetch+])
 
 (defn request+ [opts]
   (js/Promise.
