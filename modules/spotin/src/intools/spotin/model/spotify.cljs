@@ -180,6 +180,9 @@
    (fn [resolve reject]
      (sieppari/execute request-interceptors opts resolve reject))))
 
+(def client
+  {:request+ request+})
+
 (defn get [url & [opts]]
   (assoc opts :method :get :url url :content-type :json :accept :json))
 
@@ -192,7 +195,7 @@
 (defn delete [url & [opts]]
   (assoc opts :method :delete :url url :content-type :json :accept :json))
 
-(defn paginated-get+ [initial-url]
+(defn paginated-get+ [{:keys [request+]} initial-url]
   (let [!items (atom nil)]
     (letfn [(fetch-page+ [url]
               (-> (request+ (get url))
@@ -206,10 +209,10 @@
 (defn get-playlist [playlist-id]
   (get (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id))))
 
-(defn get-all-playlists+ []
-  (paginated-get+ "https://api.spotify.com/v1/me/playlists?limit=50"))
+(defn get-all-playlists+ [client]
+  (paginated-get+ client "https://api.spotify.com/v1/me/playlists?limit=50"))
 
-(defn get-playlist-tracks+ [playlist-id]
+(defn get-playlist-tracks+ [{:keys [request+]} playlist-id]
   ;; TODO use paginated-get+
   (request+ (get (str "https://api.spotify.com/v1/playlists/" (js/encodeURIComponent playlist-id) "/tracks")
                  {:query-params {:limit 100}})))
@@ -224,7 +227,7 @@
 (defn get-album [album-id]
   (get (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id))))
 
-(defn get-album-tracks+ [album-id]
+(defn get-album-tracks+ [{:keys [request+]} album-id]
   ;; TODO use paginated-get+
   (request+ (get (str "https://api.spotify.com/v1/albums/" (js/encodeURIComponent album-id) "/tracks")
                  {:query-params {:limit 50}})))
@@ -232,7 +235,7 @@
 (defn get-artist [artist-id]
   (get (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id))))
 
-(defn get-artist-albums+ [artist-id]
+(defn get-artist-albums+ [{:keys [request+]} artist-id]
   ;; TODO use paginated-get+
   ;; TODO include appears_on,compilation album groups later, needs thinking about how to fit them in the UI
   (request+ (get (str "https://api.spotify.com/v1/artists/" (js/encodeURIComponent artist-id) "/albums")
@@ -308,7 +311,7 @@
 (defn current-user []
   (get "https://api.spotify.com/v1/me"))
 
-(defn auto-select-device+ []
+(defn auto-select-device+ [{:keys [request+]}]
   (-> (request+ (get-player-devices))
       (.then (fn [{:keys [devices]}]
                (if (= (count devices) 1)
