@@ -175,14 +175,6 @@
    (make-timeout-signal-interceptor 10000)
    fetch/request->fetch+])
 
-(defn request+ [opts]
-  (js/Promise.
-   (fn [resolve reject]
-     (sieppari/execute request-interceptors opts resolve reject))))
-
-(def client
-  {:request+ request+})
-
 (defn get [url & [opts]]
   (assoc opts :method :get :url url :content-type :json :accept :json))
 

@@ -2,6 +2,7 @@
   (:require
    [intools.spotin.app.mutations :as mutations]
    [intools.spotin.app.query :as query :refer [!query-client]]
+   [intools.spotin.infrastructure.spotify-client :as spotify-client]
    [intools.spotin.model.playlist :as playlist]
    [intools.spotin.model.spotify :as spotify]
    [re-frame.core :refer [dispatch reg-fx]]))
@@ -16,14 +17,14 @@
 (defn with-auto-select-device+ [make-request]
   (-> (let [playback (.getQueryData @!query-client "player")]
         (if (spotify/playback-stopped? playback)
-          (spotify/auto-select-device+ spotify/client)
+          (spotify/auto-select-device+ spotify-client/client)
           ;; TODO: show device picker if auto-connect fails
           (js/Promise.resolve)))
-      (.then #(spotify/request+ (make-request)))
+      (.then #(spotify-client/request+ (make-request)))
       (.catch (fn [err]
                 (if (error-not-found? err)
-                  (-> (spotify/auto-select-device+ spotify/client)
-                      (.then #(spotify/request+ (make-request)))
+                  (-> (spotify/auto-select-device+ spotify-client/client)
+                      (.then #(spotify-client/request+ (make-request)))
                       (.catch (fn [_]
                                 (throw err))))
                   ;; TODO open the device picker when multiple devices are listed
@@ -90,7 +91,7 @@
 
 (reg-fx :playlist-unfollow
   (fn [playlist-id]
-    (-> (spotify/request+ (spotify/playlist-unfollow playlist-id))
+    (-> (spotify-client/request+ (spotify/playlist-unfollow playlist-id))
         ;; TODO: maybe only refresh the single playlist
         (.then #(dispatch [:spotin/refresh-playlists])))))
 
@@ -123,7 +124,7 @@
         ;; If playback is in stopped state then paly/pause does nothing.
         ;; Therefore we try to select available device and triger play directly.
         (if (spotify/playback-stopped? playback)
-          (-> (spotify/auto-select-device+ spotify/client)
+          (-> (spotify/auto-select-device+ spotify-client/client)
               ;; TODO: show device picker if auto-connect fails
-              (.then #(spotify/request+ (spotify/player-play))))
+              (.then #(spotify-client/request+ (spotify/player-play))))
           (mutate))))))
