@@ -5,9 +5,6 @@
             [sieppari.core :as sieppari]
             [intools.spotin.infrastructure.fetch :as fetch]))
 
-(def client-id (.. js/process -env -SPOTIFY_CLIENT_ID))
-(def client-secret (.. js/process -env -SPOTIFY_CLIENT_SECRET))
-(def refresh-token (.. js/process -env -SPOTIFY_REFRESH_TOKEN))
 (def redirect-uri "http://localhost:8888/callback")
 
 (def scopes
@@ -20,7 +17,6 @@
    "user-read-currently-playing"
    "user-library-read"])
 
-(defonce !access-token (atom nil))
 (defonce ^:dynamic *before-request-callback* nil)
 (defonce ^:dynamic *after-request-callback* nil)
 (defonce ^:dynamic *request-error-callback* nil)
@@ -33,12 +29,12 @@
   (-> (str/split uri #":")
       (nth 2)))
 
-(defn authorization-url []
-  (str "https://accounts.spotify.com/authorize"
-       "?response_type=code"
-       "&scope=" (js/encodeURIComponent (str/join " " scopes))
-       "&redirect_uri=" (js/encodeURIComponent redirect-uri)
-       "&client_id=" (js/encodeURIComponent client-id)))
+#_(defn authorization-url []
+    (str "https://accounts.spotify.com/authorize"
+         "?response_type=code"
+         "&scope=" (js/encodeURIComponent (str/join " " scopes))
+         "&redirect_uri=" (js/encodeURIComponent redirect-uri)
+         "&client_id=" (js/encodeURIComponent client-id)))
 
 (defn parse-json-response [response]
   (if (.-ok response)
@@ -110,21 +106,21 @@
    (fn [resolve reject]
      (sieppari/execute basic-request-interceptors opts resolve reject))))
 
-(defn tokens-from-authorization-code+ [code]
-  (let [auth-options {:method "POST"
-                      :url "https://accounts.spotify.com/api/token"
-                      :headers {:Authorization (str "Basic "
-                                                    (-> (js/Buffer.from (str client-id ":" client-secret))
-                                                        (.toString "base64")))}
-                      :content-type :form
-                      :accept :json
-                      :body {:grant_type "authorization_code"
-                             :code code
-                             :redirect_uri redirect-uri}}]
-    (-> (basic-request+ auth-options)
-        (.then (fn [^js body]
-                 (js/console.log body)
-                 body)))))
+#_(defn tokens-from-authorization-code+ [code]
+    (let [auth-options {:method "POST"
+                        :url "https://accounts.spotify.com/api/token"
+                        :headers {:Authorization (str "Basic "
+                                                      (-> (js/Buffer.from (str client-id ":" client-secret))
+                                                          (.toString "base64")))}
+                        :content-type :form
+                        :accept :json
+                        :body {:grant_type "authorization_code"
+                               :code code
+                               :redirect_uri redirect-uri}}]
+      (-> (basic-request+ auth-options)
+          (.then (fn [^js body]
+                   (js/console.log body)
+                   body)))))
 
 (defn refresh-token-request [{:keys [client-id client-secret refresh-token]}]
   {:method "POST"
@@ -162,18 +158,6 @@
                 (-> (refresh-token+)
                     (.then #(re-execute-context (::refresh-ctx ctx)))
                     (.then #(assoc % :stack stack)))))}))
-
-(def request-interceptors
-  [callbacks-interceptor
-   (make-refresh-interceptor {:!access-token !access-token
-                              :client-opts {:client-id client-id
-                                            :client-secret client-secret
-                                            :refresh-token refresh-token}})
-   js->clj-response-interceptor
-   parse-json-response-interceptor
-   (make-authorize-interceptor {:get-access-token (fn [] @!access-token)})
-   (make-timeout-signal-interceptor 10000)
-   fetch/request->fetch+])
 
 (defn get [url & [opts]]
   (assoc opts :method :get :url url :content-type :json :accept :json))
