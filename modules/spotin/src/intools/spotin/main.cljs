@@ -15,7 +15,6 @@
    [intools.spotin.model.spotify :as spotify]
    [re-frame.core :as rf :refer [dispatch subscribe]]
    [react]
-   [react-query :refer [QueryClientProvider]]
    [reagent.core :as r]))
 
 (defonce !app (atom nil))
@@ -119,12 +118,8 @@
      [:f> containers/playback-status-bar]
      [containers/shortcuts-bar]]))
 
-(defn app-wrapper []
-  [:> QueryClientProvider {:client (query-client/the-client)}
-   [:f> app]])
-
 (defn render []
-  (reset! !app (ink/render (r/as-element [app-wrapper]))))
+  (reset! !app (ink/render (r/as-element [:f> app]))))
 
 (defn -main []
   (when-some [missing-credentials (->> ["SPOTIFY_CLIENT_ID" "SPOTIFY_CLIENT_SECRET" "SPOTIFY_REFRESH_TOKEN"]
@@ -144,4 +139,4 @@
 
 (defn ^:dev/after-load reload! []
   (rf/clear-subscription-cache!)
-  (.rerender ^js/InkInstance @!app (r/as-element [app-wrapper])))
+  (.rerender ^js/InkInstance @!app (r/as-element [:f> app])))
