@@ -11,7 +11,7 @@
    [intools.spotin.app.subs]
    [intools.spotin.containers :as containers]
    [intools.spotin.infrastructure.query-client :as query-client]
-   [intools.spotin.lib.terminal-title :as terminal-title]
+   [intools.spotin.infrastructure.terminal-title :as terminal-title]
    [intools.spotin.model.spotify :as spotify]
    [re-frame.core :as rf :refer [dispatch subscribe]]
    [react]

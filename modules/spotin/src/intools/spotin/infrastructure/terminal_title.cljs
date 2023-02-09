@@ -1,4 +1,4 @@
-(ns intools.spotin.lib.terminal-title
+(ns intools.spotin.infrastructure.terminal-title
   (:require
    ["ink" :as ink]
    ["react" :as react]))
