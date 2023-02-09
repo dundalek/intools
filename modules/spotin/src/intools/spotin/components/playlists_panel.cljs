@@ -1,11 +1,10 @@
 (ns intools.spotin.components.playlists-panel
-  (:require [ink :refer [Box Spacer Text]]
+  (:require [ink :refer [Box Text]]
             [intools.hooks :as hooks]
             [intools.search :as search]
             [intools.spotin.format :refer [playback-indicator]]
             [intools.views :refer [scroll-status uncontrolled-text-input use-selectable-list-controlled]]
-            [react]
-            [intools.spotin.app.query :as query]))
+            [react]))
 
 (defn playlist-item [{:keys [name]} {:keys [is-selected is-active is-highlighted]}]
   (let [props {:bold is-selected

@@ -1,4 +1,4 @@
-(ns intools.spotin.app.query
+(ns intools.spotin.app.queries
   (:require
    [intools.spotin.infrastructure.spotify-client :as spotify-client]
    [intools.spotin.model.spotify :as spotify]
