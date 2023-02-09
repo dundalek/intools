@@ -17,10 +17,6 @@
    "user-read-currently-playing"
    "user-library-read"])
 
-(defonce ^:dynamic *before-request-callback* nil)
-(defonce ^:dynamic *after-request-callback* nil)
-(defonce ^:dynamic *request-error-callback* nil)
-
 ;; Playback API does not seem to have Read-your-writes consistency,
 ;; wait 2 seconds before trying to fetch status update.
 (def player-update-delay 2000)
@@ -53,20 +49,20 @@
                 (.then parse-json-response)
                 (.then #(assoc ctx :response %))))})
 
-(def callbacks-interceptor
+(defn make-callbacks-interceptor [{:keys [before-request-callback after-request-callback request-error-callback]}]
   {:enter (fn [{:keys [request] :as ctx}]
-            (when *before-request-callback*
-              (*before-request-callback* request))
+            (when before-request-callback
+              (before-request-callback request))
             ctx)
    :leave (fn [{:keys [request] :as ctx}]
-            (when *after-request-callback*
-              (*after-request-callback* request))
+            (when after-request-callback
+              (after-request-callback request))
             ctx)
    :error (fn [{:keys [request error] :as ctx}]
-            (when *request-error-callback*
-              (*request-error-callback* error request))
-            (when *after-request-callback*
-              (*after-request-callback* request))
+            (when request-error-callback
+              (request-error-callback error request))
+            (when after-request-callback
+              (after-request-callback request))
             ctx)})
 
 (defn make-authorize-interceptor [{:keys [get-access-token]}]

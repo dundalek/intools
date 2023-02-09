@@ -12,7 +12,6 @@
    [intools.spotin.containers :as containers]
    [intools.spotin.infrastructure.spotify-client :as spotify-client]
    [intools.spotin.infrastructure.terminal-title :as terminal-title]
-   [intools.spotin.model.spotify :as spotify]
    [re-frame.core :as rf :refer [dispatch subscribe]]
    [react]
    [reagent.core :as r]))
@@ -133,12 +132,12 @@
   (set! spotify-client/*client*
         (spotify-client/make-client {:client-id (.. js/process -env -SPOTIFY_CLIENT_ID)
                                      :client-secret (.. js/process -env -SPOTIFY_CLIENT_SECRET)
-                                     :refresh-token (.. js/process -env -SPOTIFY_REFRESH_TOKEN)}))
+                                     :refresh-token (.. js/process -env -SPOTIFY_REFRESH_TOKEN)
+                                     :before-request-callback #(dispatch [:spotin/request-started])
+                                     :after-request-callback #(dispatch [:spotin/request-finished])
+                                     :request-error-callback (fn [error request]
+                                                               (dispatch [:spotin/request-failed error request]))}))
 
-  (set! spotify/*before-request-callback* #(dispatch [:spotin/request-started]))
-  (set! spotify/*after-request-callback* #(dispatch [:spotin/request-finished]))
-  (set! spotify/*request-error-callback* (fn [error request]
-                                           (dispatch [:spotin/request-failed error request])))
   (rf/dispatch-sync [:spotin/init])
   (render))
 

@@ -4,9 +4,13 @@
    [intools.spotin.model.spotify :as spotify]
    [sieppari.core :as sieppari]))
 
-(defn make-client [{:keys [client-id client-secret refresh-token]}]
+(defn make-client [{:keys [client-id client-secret refresh-token
+                           before-request-callback after-request-callback request-error-callback]}]
   (let [!access-token (atom nil)
-        request-interceptors [spotify/callbacks-interceptor
+        request-interceptors [(spotify/make-callbacks-interceptor
+                                {:before-request-callback before-request-callback
+                                 :after-request-callback after-request-callback
+                                 :request-error-callback request-error-callback})
                               (spotify/make-refresh-interceptor
                                {:!access-token !access-token
                                 :client-opts {:client-id client-id
