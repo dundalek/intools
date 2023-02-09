@@ -4,28 +4,30 @@
    [intools.spotin.model.spotify :as spotify]
    [sieppari.core :as sieppari]))
 
-(def client-id (.. js/process -env -SPOTIFY_CLIENT_ID))
-(def client-secret (.. js/process -env -SPOTIFY_CLIENT_SECRET))
-(def refresh-token (.. js/process -env -SPOTIFY_REFRESH_TOKEN))
-(defonce !access-token (atom nil))
+(defn make-client [{:keys [client-id client-secret refresh-token]}]
+  (let [!access-token (atom nil)
+        request-interceptors [spotify/callbacks-interceptor
+                              (spotify/make-refresh-interceptor
+                               {:!access-token !access-token
+                                :client-opts {:client-id client-id
+                                              :client-secret client-secret
+                                              :refresh-token refresh-token}})
+                              spotify/js->clj-response-interceptor
+                              spotify/parse-json-response-interceptor
+                              (spotify/make-authorize-interceptor {:get-access-token (fn [] @!access-token)})
+                              (spotify/make-timeout-signal-interceptor 10000)
+                              fetch/request->fetch+]
+        request+ (fn request+ [opts]
+                   (js/Promise.
+                    (fn [resolve reject]
+                      (sieppari/execute request-interceptors opts resolve reject))))]
+    {:request+ request+}))
 
-(def request-interceptors
-  [spotify/callbacks-interceptor
-   (spotify/make-refresh-interceptor
-    {:!access-token !access-token
-     :client-opts {:client-id client-id
-                   :client-secret client-secret
-                   :refresh-token refresh-token}})
-   spotify/js->clj-response-interceptor
-   spotify/parse-json-response-interceptor
-   (spotify/make-authorize-interceptor {:get-access-token (fn [] @!access-token)})
-   (spotify/make-timeout-signal-interceptor 10000)
-   fetch/request->fetch+])
+(def ^:dynamic *client* nil)
+
+(defn the-client []
+  *client*)
 
 (defn request+ [opts]
-  (js/Promise.
-   (fn [resolve reject]
-     (sieppari/execute request-interceptors opts resolve reject))))
-
-(def client
-  {:request+ request+})
+  (let [{:keys [request+]} (the-client)]
+    (request+ opts)))

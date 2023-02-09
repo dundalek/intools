@@ -18,13 +18,13 @@
 (defn with-auto-select-device+ [make-request]
   (-> (let [playback (.getQueryData (query-client/the-client) "player")]
         (if (spotify/playback-stopped? playback)
-          (spotify/auto-select-device+ spotify-client/client)
+          (spotify/auto-select-device+ (spotify-client/the-client))
           ;; TODO: show device picker if auto-connect fails
           (js/Promise.resolve)))
       (.then #(spotify-client/request+ (make-request)))
       (.catch (fn [err]
                 (if (error-not-found? err)
-                  (-> (spotify/auto-select-device+ spotify-client/client)
+                  (-> (spotify/auto-select-device+ (spotify-client/the-client))
                       (.then #(spotify-client/request+ (make-request)))
                       (.catch (fn [_]
                                 (throw err))))
@@ -141,7 +141,7 @@
 
 (reg-fx :playlists-mix
   (fn [playlist-ids]
-    (-> (playlist/create-mixed-playlist+ spotify-client/client playlist-ids)
+    (-> (playlist/create-mixed-playlist+ (spotify-client/the-client) playlist-ids)
         ;; TODO: maybe only refresh the single playlist
         (.then #(dispatch [:spotin/refresh-playlists])))))
 
@@ -180,7 +180,7 @@
         ;; If playback is in stopped state then paly/pause does nothing.
         ;; Therefore we try to select available device and triger play directly.
         (if (spotify/playback-stopped? playback)
-          (-> (spotify/auto-select-device+ spotify-client/client)
+          (-> (spotify/auto-select-device+ (spotify-client/the-client))
               ;; TODO: show device picker if auto-connect fails
               (.then #(spotify-client/request+ (spotify/player-play))))
           (mutate))))))

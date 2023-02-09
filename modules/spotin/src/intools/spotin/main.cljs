@@ -10,7 +10,7 @@
    [intools.spotin.app.fx]
    [intools.spotin.app.subs]
    [intools.spotin.containers :as containers]
-   [intools.spotin.infrastructure.query-client :as query-client]
+   [intools.spotin.infrastructure.spotify-client :as spotify-client]
    [intools.spotin.infrastructure.terminal-title :as terminal-title]
    [intools.spotin.model.spotify :as spotify]
    [re-frame.core :as rf :refer [dispatch subscribe]]
@@ -129,6 +129,11 @@
       (println "Missing" x))
     (println "\nPlease refer to the README for configuration instructions.")
     (.exit js/process))
+
+  (set! spotify-client/*client*
+        (spotify-client/make-client {:client-id (.. js/process -env -SPOTIFY_CLIENT_ID)
+                                     :client-secret (.. js/process -env -SPOTIFY_CLIENT_SECRET)
+                                     :refresh-token (.. js/process -env -SPOTIFY_REFRESH_TOKEN)}))
 
   (set! spotify/*before-request-callback* #(dispatch [:spotin/request-started]))
   (set! spotify/*after-request-callback* #(dispatch [:spotin/request-finished]))
