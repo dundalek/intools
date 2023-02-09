@@ -11,7 +11,9 @@
    [intools.spotin.app.subs]
    [intools.spotin.containers :as containers]
    [intools.spotin.infrastructure.spotify-client :as spotify-client]
+   [intools.spotin.infrastructure.system :as system]
    [intools.spotin.infrastructure.terminal-title :as terminal-title]
+   [juxt.clip.core :as clip]
    [re-frame.core :as rf :refer [dispatch subscribe]]
    [react]
    [reagent.core :as r]))
@@ -120,6 +122,19 @@
 (defn render []
   (reset! !app (ink/render (r/as-element [:f> app]))))
 
+(def system-config
+  {:components
+   ;; can't start query client, because it is too late since it is eagerly used during fx namespace loading
+   {;:query-client {:start (list query-client/make-client)}}
+    :spotify-client {:start (list spotify-client/make-client
+                                  {:client-id (.. js/process -env -SPOTIFY_CLIENT_ID)
+                                   :client-secret (.. js/process -env -SPOTIFY_CLIENT_SECRET)
+                                   :refresh-token (.. js/process -env -SPOTIFY_REFRESH_TOKEN)
+                                   :before-request-callback #(dispatch [:spotin/request-started])
+                                   :after-request-callback #(dispatch [:spotin/request-finished])
+                                   :request-error-callback (fn [error request]
+                                                             (dispatch [:spotin/request-failed error request]))})}}})
+
 (defn -main []
   (when-some [missing-credentials (->> ["SPOTIFY_CLIENT_ID" "SPOTIFY_CLIENT_SECRET" "SPOTIFY_REFRESH_TOKEN"]
                                        (filter #(str/blank? (-> js/process .-env (gobj/get %))))
@@ -129,14 +144,7 @@
     (println "\nPlease refer to the README for configuration instructions.")
     (.exit js/process))
 
-  (set! spotify-client/*client*
-        (spotify-client/make-client {:client-id (.. js/process -env -SPOTIFY_CLIENT_ID)
-                                     :client-secret (.. js/process -env -SPOTIFY_CLIENT_SECRET)
-                                     :refresh-token (.. js/process -env -SPOTIFY_REFRESH_TOKEN)
-                                     :before-request-callback #(dispatch [:spotin/request-started])
-                                     :after-request-callback #(dispatch [:spotin/request-finished])
-                                     :request-error-callback (fn [error request]
-                                                               (dispatch [:spotin/request-failed error request]))}))
+  (set! system/*system* (clip/start system-config))
 
   (rf/dispatch-sync [:spotin/init])
   (render))

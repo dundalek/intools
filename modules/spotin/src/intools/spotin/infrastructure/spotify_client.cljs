@@ -1,6 +1,7 @@
 (ns intools.spotin.infrastructure.spotify-client
   (:require
    [intools.spotin.infrastructure.fetch :as fetch]
+   [intools.spotin.infrastructure.system :as system]
    [intools.spotin.model.spotify :as spotify]
    [sieppari.core :as sieppari]))
 
@@ -27,10 +28,8 @@
                       (sieppari/execute request-interceptors opts resolve reject))))]
     {:request+ request+}))
 
-(def ^:dynamic *client* nil)
-
 (defn the-client []
-  *client*)
+  (:spotify-client system/*system*))
 
 (defn request+ [opts]
   (let [{:keys [request+]} (the-client)]

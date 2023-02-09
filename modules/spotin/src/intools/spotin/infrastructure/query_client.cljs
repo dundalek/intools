@@ -8,15 +8,17 @@
 (defn- subscribe-noop []
   (fn []))
 
-(defonce ^:private !query-client
-  (do
-    ;; `refetchInterval` is disabled when running on server (node), monkey-patch it to make it work.
-    ;; But then we need to also monkey-patch the managers because they depend on browser-only APIs.
-    (set! (.-isServer utils) false)
-    (set! (.-subscribe focusManager) subscribe-noop)
-    (set! (.-subscribe onlineManager) subscribe-noop)
+;; `refetchInterval` is disabled when running on server (node), monkey-patch it to make it work.
+;; But then we need to also monkey-patch the managers because they depend on browser-only APIs.
+(set! (.-isServer utils) false)
+(set! (.-subscribe focusManager) subscribe-noop)
+(set! (.-subscribe onlineManager) subscribe-noop)
 
-    (atom (rq/QueryClient.))))
+(defn make-client []
+  (rq/QueryClient.))
+
+(defonce ^:private !query-client
+  (atom (make-client)))
 
 (defn the-client []
   @!query-client)
