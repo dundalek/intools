@@ -1,9 +1,10 @@
 (ns intools.spotin.infrastructure.query-client
   (:require
+   ["react-query" :as rq]
    ["react-query/lib/core/focusManager" :refer [focusManager]]
    ["react-query/lib/core/onlineManager" :refer [onlineManager]]
    ["react-query/lib/core/utils" :as utils]
-   ["react-query" :as rq]))
+   [intools.spotin.infrastructure.system :as system]))
 
 (defn- subscribe-noop []
   (fn []))
@@ -17,8 +18,5 @@
 (defn make-client []
   (rq/QueryClient.))
 
-(defonce ^:private !query-client
-  (atom (make-client)))
-
 (defn the-client []
-  @!query-client)
+  (:query-client system/*system*))
