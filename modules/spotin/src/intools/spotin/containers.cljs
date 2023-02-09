@@ -6,7 +6,6 @@
    [intools.spotin.actions :as actions :refer [action-separator album-actions
                                                artist-actions artist-tracks-actions player-actions
                                                playlist-actions playlists-actions tracks-actions]]
-   [intools.spotin.app.query :as query]
    [intools.spotin.components.action-menu :as action-menu]
    [intools.spotin.components.artist-panel :as artist-panel]
    [intools.spotin.components.confirmation-modal :as confirmation-modal]
@@ -23,28 +22,27 @@
    [react]))
 
 (defn playlist-rename-input-panel [{:keys [id name]}]
-  (let [mutation (query/use-optimistic-playlist-mutation {:playlist-id id
-                                                          :attr :name})]
-    [:f> input-bar/input-bar
-     {:focus-id "input-bar"
-      :label (str "Rename playlist '" name "':")
-      :default-value name
-      :on-submit (fn [value]
-                   (.mutate mutation value)
-                   (dispatch [:close-input-panel]))
-      :on-cancel #(dispatch [:close-input-panel])}]))
+  [:f> input-bar/input-bar
+   {:focus-id "input-bar"
+    :label (str "Rename playlist '" name "':")
+    :default-value name
+    :on-submit (fn [value]
+                 (dispatch [:spotin/playlist-change-submitted {:playlist-id id
+                                                               :attr :name
+                                                               :value value}]))
+
+    :on-cancel #(dispatch [:close-input-panel])}])
 
 (defn playlist-edit-description-input-panel [{:keys [id name description]}]
-  (let [mutation (query/use-optimistic-playlist-mutation {:playlist-id id
-                                                          :attr :description})]
-    [:f> input-bar/input-bar
-     {:focus-id "input-bar"
-      :label (str "Edit description for playlist '" name "':")
-      :default-value description
-      :on-submit (fn [value]
-                   (.mutate mutation value)
-                   (dispatch [:close-input-panel]))
-      :on-cancel #(dispatch [:close-input-panel])}]))
+  [:f> input-bar/input-bar
+   {:focus-id "input-bar"
+    :label (str "Edit description for playlist '" name "':")
+    :default-value description
+    :on-submit (fn [value]
+                 (dispatch [:spotin/playlist-change-submitted {:playlist-id id
+                                                               :attr :description
+                                                               :value value}]))
+    :on-cancel #(dispatch [:close-input-panel])}])
 
 (defn playlists-panel []
   (let [player (:data @(subscribe [:spotin/player]))

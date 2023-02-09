@@ -4,7 +4,16 @@
    [intools.spotin.infrastructure.spotify-client :as spotify-client]
    [intools.spotin.model.spotify :as spotify]
    [react]
-   [react-query :as rq :refer [useMutation]]))
+   [react-query :as rq]))
+
+(defn make-mutation-fx [query-client options]
+  ;; based on onMutate
+  ;; ignoring result (which is observed and returned when using the hook, but we just rely on global indicators)
+  (let [observer (rq/MutationObserver. query-client options)]
+    (fn [value]
+      (-> (.mutate observer value)
+            ;; We hook into request errors globally, but reconsider if there is a better approach
+          (.catch (fn [_]))))))
 
 (defn make-optimistic-mutation-fx
   ([options] (make-optimistic-mutation-fx (query-client/the-client) options))
@@ -27,37 +36,30 @@
                                                                  (.cancelQueries query-client query-key)
                                                                  (.invalidateQueries query-client query-key)))
                                                              spotify/player-update-delay)))}
-         ;; based on onMutate
-         ;; ignoring result (which is observed and returned when using the hook, but we just rely on global indicators)
-         observer (rq/MutationObserver. query-client mutation-options)]
-     (fn mutate []
+         mutate (make-mutation-fx query-client mutation-options)]
+     (fn []
        (let [current (-> (.getQueryData query-client query-key)
-                         (get-in value-path))
-             variables (update-fn current)]
-         (-> (.mutate observer variables)
-             (.catch (fn [_]))))))))
+                         (get-in value-path))]
+         (mutate (update-fn current)))))))
 
-(defn use-optimistic-playlist-mutation
-  ([options] (use-optimistic-playlist-mutation (query-client/the-client) options))
-  ([query-client {:keys [playlist-id attr]}]
-   (let [query-key "playlists"]
-     (useMutation
-      #(spotify-client/request+ (spotify/playlist-change playlist-id {attr %}))
-      #js{:onMutate (fn [value]
-                      (let [current (.getQueryData query-client query-key)
-                            optimistic (update current :items
-                                               (partial map (fn [playlist]
-                                                              (cond-> playlist
-                                                                (= (:id playlist) playlist-id) (assoc attr value)))))]
-                        (.cancelQueries query-client query-key)
-                        (.setQueryData query-client query-key optimistic)
-                        current))
-          :onError (fn [_err _value original]
-                     (.setQueryData query-client query-key original))
-          :onSettled (fn []
-                       ;; Count 1 means to only invalidate if we are the last mutation
-                       (when (= (.isMutating query-client) 1)
-                         (.invalidateQueries query-client query-key)))}))))
+(defn make-optimistic-playlist-mutation-fx [query-client]
+  (let [query-key "playlists"
+        mutation-options #js {:mutationFn (fn [{:keys [playlist-id attr value]}]
+                                            (spotify-client/request+ (spotify/playlist-change playlist-id {attr value})))
+                              :onMutate (fn [{:keys [playlist-id attr value]}]
+                                          (let [current (.getQueryData query-client query-key)
+                                                optimistic (update current :items
+                                                                   (partial map (fn [playlist]
+                                                                                  (cond-> playlist
+                                                                                    (= (:id playlist) playlist-id) (assoc attr value)))))]
+                                            (.cancelQueries query-client query-key)
+                                            (.setQueryData query-client query-key optimistic)
+                                            current))
+                              :onError (fn [_err _value original]
+                                         (.setQueryData query-client query-key original))
+                              :onSettled (fn []
+                                           (.invalidateQueries query-client query-key))}]
+    (make-mutation-fx query-client mutation-options)))
 
 (defn player []
   #js {:queryKey #js ["player"]

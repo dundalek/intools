@@ -129,3 +129,6 @@
               ;; TODO: show device picker if auto-connect fails
               (.then #(spotify-client/request+ (spotify/player-play))))
           (mutate))))))
+
+(reg-fx :spotin/update-playlist-attribute
+  (query/make-optimistic-playlist-mutation-fx (query-client/the-client)))

@@ -127,6 +127,11 @@
     (app/open-input-panel db {:type :playlist-edit-description
                               :arg arg})))
 
+(reg-event-fx :spotin/playlist-change-submitted
+  (fn [{db :db} [_ params]]
+    {:db (app/close-input-panel db)
+     :spotin/update-playlist-attribute params}))
+
 (reg-event-db :spotin/playlist-unfollow-selected
   (fn [db [_ arg]]
     (app/open-confirmation-modal
