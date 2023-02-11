@@ -178,10 +178,6 @@
   (fn [db [_ query]]
     (assoc db :track-search-query query)))
 
-(reg-event-db :spotin/open-confirmation-modal
-  (fn [db [_ opts]]
-    (app/open-confirmation-modal db opts)))
-
 (reg-event-db :spotin/close-confirmation-modal
   (fn [db _]
     (app/close-confirmation-modal db)))

@@ -5,6 +5,7 @@
    [intools.spotin.infrastructure.spotify-client :as spotify-client]
    [intools.spotin.model.playlist :as playlist]
    [intools.spotin.model.spotify :as spotify]
+   [promesa.core :as p]
    [re-frame.core :refer [dispatch reg-fx]]
    [react-query :as rq]))
 
@@ -31,11 +32,13 @@
                   ;; TODO open the device picker when multiple devices are listed
                   (throw err))))))
 
-(defn with-playback-refresh+ [make-request]
+(defn refresh-playback+ []
+  (-> (p/delay spotify/player-update-delay)
+      (.then #(.invalidateQueries (query-client/the-client) "player"))))
+
+(defn with-auto-device-and-refresh+ [make-request]
   (-> (with-auto-select-device+ make-request)
-      (.finally (fn []
-                  (js/setTimeout #(.invalidateQueries (query-client/the-client) "player")
-                                 spotify/player-update-delay)))))
+      (.finally refresh-playback+)))
 
 (defn make-mutation-fx [get-client options]
   ;; based on onMutate
@@ -94,22 +97,22 @@
     (make-mutation-fx get-client mutation-options)))
 
 (reg-fx :next
-  (fn [_] (with-playback-refresh+ spotify/player-next)))
+  (fn [_] (with-auto-device-and-refresh+ spotify/player-next)))
 
 (reg-fx :previous
-  (fn [_] (with-playback-refresh+ spotify/player-previous)))
+  (fn [_] (with-auto-device-and-refresh+ spotify/player-previous)))
 
 (reg-fx :playlist-play
-  (fn [arg] (with-playback-refresh+ #(spotify/player-play {:context_uri (:uri arg)}))))
+  (fn [arg] (with-auto-device-and-refresh+ #(spotify/player-play {:context_uri (:uri arg)}))))
 
 (reg-fx :album-play
-  (fn [{:keys [item]}] (with-playback-refresh+ #(spotify/player-play {:context_uri (:uri item)}))))
+  (fn [{:keys [item]}] (with-auto-device-and-refresh+ #(spotify/player-play {:context_uri (:uri item)}))))
 
 (reg-fx :artist-play
-  (fn [{:keys [item]}] (with-playback-refresh+ #(spotify/player-play {:context_uri (:uri item)}))))
+  (fn [{:keys [item]}] (with-auto-device-and-refresh+ #(spotify/player-play {:context_uri (:uri item)}))))
 
 (reg-fx :artist-context-play
-  (fn [{:keys [context]}] (with-playback-refresh+ #(spotify/player-play {:context_uri (:uri context)}))))
+  (fn [{:keys [context]}] (with-auto-device-and-refresh+ #(spotify/player-play {:context_uri (:uri context)}))))
 
 (reg-fx :track-play
   (fn [{:keys [item items context]}]
@@ -121,9 +124,9 @@
                           (first))
             opts {:uris (into [] (map :uri items))
                   :offset {:position position}}]
-        (with-playback-refresh+ #(spotify/player-play opts)))
-      (with-playback-refresh+ #(spotify/player-play {:context_uri (:uri context)
-                                                     :offset {:uri (:uri item)}})))))
+        (with-auto-device-and-refresh+ #(spotify/player-play opts)))
+      (with-auto-device-and-refresh+ #(spotify/player-play {:context_uri (:uri context)
+                                                            :offset {:uri (:uri item)}})))))
 
 (reg-fx :spotin/queue-track
   (fn [uri]
@@ -135,7 +138,8 @@
 
 (reg-fx :spotin/player-transfer
   (fn [device-id]
-    (with-playback-refresh+ #(spotify/player-transfer device-id))))
+    (-> (spotify-client/request+ (spotify/player-transfer device-id))
+        (.finally refresh-playback+))))
 
 (reg-fx :playlist-share
   (fn [arg] (js/console.log "Playlist URI:" (:uri arg))))
