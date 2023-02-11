@@ -23,3 +23,11 @@
 
 (defn close-confirmation-modal [db]
   (assoc db :confirmation-modal nil))
+
+(defn open-action-menu [db actions]
+  (assoc db :actions actions))
+
+(defn close-action-menu [db]
+  (assoc db
+         :actions nil
+         :actions-search-query nil))

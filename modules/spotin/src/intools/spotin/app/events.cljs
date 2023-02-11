@@ -1,5 +1,6 @@
 (ns intools.spotin.app.events
   (:require
+   [intools.spotin.actions :as actions]
    [intools.spotin.app.core :as app]
    [intools.spotin.app.db :as db]
    [intools.spotin.model.spotify :as spotify]
@@ -105,13 +106,20 @@
 
 (reg-event-db :open-action-menu
   (fn [db [_ menu]]
-    (assoc db :actions menu)))
+    (app/open-action-menu db menu)))
 
 (reg-event-db :close-action-menu
   (fn [db _]
-    (assoc db
-           :actions nil
-           :actions-search-query nil)))
+    (app/close-action-menu db)))
+
+(reg-event-db :spotin/track-panel-menu-opened
+  (fn [db [_ arg]]
+    (let [tracks-actions (map #(assoc % :arg arg)
+                              actions/tracks-actions)
+          actions (concat tracks-actions
+                          [actions/action-separator]
+                          actions/player-actions)]
+      (app/open-action-menu db actions))))
 
 (reg-event-db :close-input-panel
   (fn [db _]
@@ -194,3 +202,7 @@
   (fn [{db :db} [_ device-id]]
     {:db (assoc db :devices-menu false)
      :spotin/player-transfer device-id}))
+
+(reg-event-db :spotin/open-dev-stories
+  (fn [db _]
+    (app/router-navigate db {:name :stories})))

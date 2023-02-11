@@ -6,7 +6,7 @@
    [intools.search :as search]
    [intools.spotin.actions :as actions :refer [action-separator album-actions
                                                artist-actions
-                                               artist-tracks-actions player-actions playlist-actions playlists-actions tracks-actions]]
+                                               artist-tracks-actions player-actions playlist-actions playlists-actions]]
    [intools.spotin.components.action-menu :as action-menu]
    [intools.spotin.components.artist-panel :as artist-panel]
    [intools.spotin.components.confirmation-modal :as confirmation-modal]
@@ -129,11 +129,9 @@
                        :track-item-component track-item-component
                        :playback-item-uri playback-item-uri
                        :on-menu (fn [item]
-                                  (let [tracks-actions (map #(assoc % :arg {:item item
-                                                                            :context context-item})
-                                                            tracks-actions)
-                                        actions (concat tracks-actions [action-separator] player-actions)]
-                                    (dispatch [:open-action-menu actions])))
+                                  (dispatch [:spotin/track-panel-menu-opened
+                                             {:context context-item
+                                              :item item}]))
                        :on-activate (fn [item]
                                       (dispatch [:spotin/dispatch-fx :track-play
                                                  {:context context-item
