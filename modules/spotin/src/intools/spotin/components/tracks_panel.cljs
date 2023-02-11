@@ -2,7 +2,7 @@
   (:require [clojure.string :as str]
             [ink :refer [Box Text]]
             [intools.spotin.format :refer [format-album-release-year format-duration playback-indicator]]
-            [intools.views :refer [scroll-status uncontrolled-text-input use-scrollable-box]]
+            [intools.views :refer [scroll-status use-scrollable-box]]
             [react]))
 
 (defn playlist-track-item [track {:keys [is-selected is-highlighted]}]
@@ -72,8 +72,8 @@
       [:> Box {:min-width 4 :justify-content "flex-end"}
        [:> Text total_tracks]]]]))
 
-(defn tracks-panel [{:keys [focus-id header tracks is-searching playback-item-uri track-item-component
-                            on-activate on-menu on-search-change on-search-cancel]}]
+(defn tracks-panel [{:keys [focus-id header tracks playback-item-uri track-item-component
+                            on-activate on-menu]}]
   (let [{:keys [box-ref is-focused selected-index select displayed-selected-index displayed-items]}
         (use-scrollable-box {:focus-id focus-id
                              :items tracks
@@ -105,12 +105,6 @@
              :border-color (when is-focused "green")
              :padding-right 1}
      header
-     (when is-searching
-       [:> Box {:height 2}
-        [:> Text "Search tracks: "]
-        [:f> uncontrolled-text-input {:focus is-focused
-                                      :on-change on-search-change
-                                      :on-cancel on-search-cancel}]])
      [:> Box {:flex-direction "column"
               :flex-grow 1
               :ref box-ref}

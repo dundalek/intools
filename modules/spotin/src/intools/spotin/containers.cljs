@@ -2,10 +2,11 @@
   (:require
    [clojure.string :as str]
    [ink :refer [Box Text]]
+   [intools.hooks :as hooks]
    [intools.search :as search]
    [intools.spotin.actions :as actions :refer [action-separator album-actions
-                                               artist-actions artist-tracks-actions player-actions
-                                               playlist-actions playlists-actions tracks-actions]]
+                                               artist-actions
+                                               artist-tracks-actions player-actions playlist-actions playlists-actions tracks-actions]]
    [intools.spotin.components.action-menu :as action-menu]
    [intools.spotin.components.artist-panel :as artist-panel]
    [intools.spotin.components.confirmation-modal :as confirmation-modal]
@@ -18,6 +19,7 @@
    [intools.spotin.components.tracks-panel :refer [album-header
                                                    album-track-item playlist-header
                                                    playlist-track-item tracks-panel]]
+   [intools.views :refer [uncontrolled-text-input]]
    [re-frame.core :refer [dispatch subscribe]]
    [react]))
 
@@ -106,18 +108,26 @@
       :on-activate (fn [{:keys [id]}]
                      (dispatch [:spotin/player-transfer id]))}]))
 
+(defn tracks-search-box [{:keys [is-focused]}]
+  (when @(subscribe [:spotin/track-search-query])
+    [:> Box {:height 2}
+     [:> Text "Search tracks: "]
+     [:f> uncontrolled-text-input {:focus is-focused
+                                   :on-change #(dispatch [:spotin/set-track-search %])
+                                   :on-cancel #(dispatch [:spotin/set-track-search nil])}]]))
+
 (defn main-tracks-panel [{:keys [header context-item tracks-filtered track-item-component]}]
   (let [player (:data @(subscribe [:spotin/player]))
         playback-item-uri (-> player :item :uri)
-        track-search-query @(subscribe [:spotin/track-search-query])]
-    [:f> tracks-panel {:focus-id "tracks-panel"
-                       :header header
+        focus-id "tracks-panel"
+        is-searchbox-focused (hooks/use-is-focused focus-id)]
+    [:f> tracks-panel {:focus-id focus-id
+                       :header [:> Box {:flex-direction "column"}
+                                header
+                                [tracks-search-box {:is-focused is-searchbox-focused}]]
                        :tracks tracks-filtered
                        :track-item-component track-item-component
-                       :is-searching (some? track-search-query)
                        :playback-item-uri playback-item-uri
-                       :on-search-change #(dispatch [:spotin/set-track-search %])
-                       :on-search-cancel #(dispatch [:spotin/set-track-search nil])
                        :on-menu (fn [item]
                                   (let [tracks-actions (map #(assoc % :arg {:item item
                                                                             :context context-item})
