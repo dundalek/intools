@@ -14,6 +14,7 @@
    [intools.spotin.infrastructure.spotify-client :as spotify-client]
    [intools.spotin.infrastructure.system :as system]
    [intools.spotin.infrastructure.terminal-title :as terminal-title]
+   [intools.spotin.stories.main :as stories]
    [juxt.clip.core :as clip]
    [re-frame.core :as rf :refer [dispatch subscribe]]
    [react]
@@ -120,8 +121,14 @@
      [:f> containers/playback-status-bar]
      [containers/shortcuts-bar]]))
 
+(defn app-wrapper []
+  (let [current-route @(subscribe [:spotin/current-route])]
+    (if (= (:name current-route) :stories)
+      [:f> stories/main]
+      [:f> app])))
+
 (defn render []
-  (reset! !app (ink/render (r/as-element [:f> app]))))
+  (reset! !app (ink/render (r/as-element [:f> app-wrapper]))))
 
 (def system-config
   {:components
@@ -154,4 +161,4 @@
 
 (defn ^:dev/after-load reload! []
   (rf/clear-subscription-cache!)
-  (.rerender ^js/InkInstance @!app (r/as-element [:f> app])))
+  (.rerender ^js/InkInstance @!app (r/as-element [:f> app-wrapper])))

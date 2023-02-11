@@ -3,6 +3,12 @@
 (def action-separator
   {:name ""})
 
+;; Note: Maybe enable only in dev mode
+(def global-actions
+  [{:id :spotin/dev-stories
+    :name "Stories (dev)"
+    :event [:spotin/open-dev-stories]}])
+
 (def player-actions
   [{:id :play-pause
     :name "play/pause"

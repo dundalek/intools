@@ -66,7 +66,9 @@
                        actions (concat playlist-actions
                                        playlists-actions
                                        [action-separator]
-                                       player-actions)]
+                                       player-actions
+                                       [action-separator]
+                                       actions/global-actions)]
                    (dispatch [:open-action-menu actions])))
       :on-activate (fn [playlist]
                      (let [{:keys [name params]} current-route]
