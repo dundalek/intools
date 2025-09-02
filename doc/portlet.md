@@ -3,6 +3,7 @@ Portlet is an approach for creating custom apps or utilities on top of Portal.
 
 In comparison to traditional rigid apps, the goal is to have highliy customizable UIs, more like a collection of applets - Portal applets - Portlets.
 It should be a moldable application substrate.
+
 At the core is the REBL (Read-Eval-Browse-Loop) principle which is an extension of REPL (Read-Eval-Print-Loop).
 Code gets evaluated and resulting values are displayed and browsed using viewers.
 A diferrence to REPL which prints resulting values in a set way, the user is in control how the values get displayed and can browse nested structures.
