@@ -23,7 +23,14 @@ One option to explore are [Portlets](#portlets).
   - [Podcaster](./tools/podcaster/) - manage queue of podcast episodes
 - TUIs
   - [Spotin](./modules/spotin/) - client for Spotify
-  
+
+| | | |
+| - | - | - |
+| ![](./doc/img/file-browser.avif) | ![](./doc/img/podcaster.avif) | ![](./doc/img/spotin.avif) |
+| File Browser | Podcaster | Spotin |
+
+
+
 ## Archetypes
 
 ### Portlets
