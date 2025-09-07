@@ -20,16 +20,17 @@ One option to explore are [Portlets](#portlets).
 
 - Portlets
   - [File Browser](./tools/file-browser/)
+  - [List Hardware](./tools/lshwin/) - view output of [lshw](https://github.com/lyonel/lshw) in a visual way
   - [Podcaster](./tools/podcaster/) - manage queue of podcast episodes
 - TUIs
   - [Spotin](./modules/spotin/) - client for Spotify
 
 | | | |
 | - | - | - |
-| ![](./doc/img/file-browser.avif) | ![](./doc/img/podcaster.avif) | ![](./doc/img/spotin.avif) |
-| File Browser | Podcaster | Spotin |
-
-
+| ![](./doc/img/file-browser.avif) | ![](./doc/img/lshwin.avif) | ![](./doc/img/podcaster.avif)  |
+| File Browser | List Hardware | Podcaster |
+| ![](./doc/img/spotin.avif) | | |
+| Spotin | | |
 
 ## Archetypes
 
