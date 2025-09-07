@@ -11,3 +11,4 @@ build/
 .envrc
 **/.lsp/*.db
 .nrepl-port
+.clj-kondo

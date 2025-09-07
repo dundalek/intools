@@ -1,0 +1,10 @@
+#!/usr/bin/env bb
+;; -*- clojure -*-
+;; vim: set filetype=clojure:
+(require '[babashka.classpath :refer [add-classpath]]
+         '[babashka.fs :as fs])
+
+(add-classpath (str (fs/canonicalize (fs/file (fs/parent *file*) "src"))))
+
+(require '[lshwin.server :as server])
+(apply server/-main *command-line-args*)

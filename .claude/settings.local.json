@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(lshw:*)",
+      "Bash(./portlet.bb)",
+      "Bash(bb test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

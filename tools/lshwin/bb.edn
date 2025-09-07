@@ -1,0 +1,10 @@
+{:deps {io.github.noahtheduke/lazytest {:mvn/version "1.8.0"}}
+ :paths ["src" "test"]
+ :tasks
+ {test:once
+  {:doc "Run tests once"
+   :task (apply (requiring-resolve 'lazytest.main/-main) *command-line-args*)}
+
+  test
+  {:doc "Run tests in watch mode"
+   :task (apply shell "watchexec -w src -w test -- bb test:once" *command-line-args*)}}}

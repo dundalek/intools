@@ -106,6 +106,19 @@ Use `:on-load` hook when opening Portal to ensure custom viewers are loaded afte
 
 When running under Babashka add `@(promise)` so that server does not immediately exit.
 
+If the implementation is split into multiple files, it can be useful to create wrapper script, which adds sources on classpath relative to its file location:
+
+      #!/usr/bin/env bb
+      ;; -*- clojure -*-
+      ;; vim: set filetype=clojure:
+      (require '[babashka.classpath :refer [add-classpath]]
+               '[babashka.fs :as fs])
+
+      (add-classpath (str (fs/canonicalize (fs/file (fs/parent *file*) "src"))))
+
+      (require '[my-tool.main :as main])
+      (apply main/-main *command-line-args*)
+
 ### State manangement
 
 Use atom to hold state. Wrap the root value with `pv/default` to set metadata to use a given viewer by default:
