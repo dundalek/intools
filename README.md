@@ -22,8 +22,12 @@ One option to explore are [Portlets](#portlets).
   - [File Browser](./tools/file-browser/)
   - [List Hardware](./tools/lshwin/) - view output of [lshw](https://github.com/lyonel/lshw) in a visual way
   - [Podcaster](./tools/podcaster/) - manage queue of podcast episodes
+  - [Daba](https://github.com/dundalek/daba) - database client, based on similar ideas as portlets
 - TUIs
   - [Spotin](./modules/spotin/) - client for Spotify
+  - [Resticin](./modules/resticin/) - interactive viewer for [restic](https://restic.net) backup tool [WIP]
+  - [Randrin](./modules/randrin/)  - manage monitors/displays based on xrandr [WIP]
+
 
 | | | |
 | - | - | - |
